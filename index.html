@@ -114,9 +114,7 @@
 
         const INITIAL_STUDENTS = [
             { id: "s1", classId: "c1", name: "Andi Ahmad Rivaldi", nis: "24001", nisn: "0081234561", gender: "L" },
-            { id: "s2", classId: "c1", name: "Nur Aisyah Humaira", nis: "24002", nisn: "0081234562", gender: "P" },
-            { id: "s3", classId: "c1", name: "Muhammad Fadel Azzam", nis: "24003", nisn: "0081234563", gender: "L" },
-            { id: "s4", classId: "c1", name: "Siti Nurhaliza", nis: "24004", nisn: "0081234564", gender: "P" }
+            { id: "s2", classId: "c1", name: "Nur Aisyah Humaira", nis: "24002", nisn: "0081234562", gender: "P" }
         ];
 
         const INITIAL_CURRICULUM = [
@@ -148,22 +146,11 @@
                                         id: "ik1",
                                         description: "Mengidentifikasi komponen penyusun materi genetik (DNA, Gen, dan Kromosom) beserta perannya.",
                                         rubric: {
-                                            Prestructural: "Murid belum menunjukkan pemahaman yang relevan tentang materi genetik.",
-                                            Unistructural: "Murid mampu menyebutkan salah satu komponen materi genetik.",
-                                            Multistructural: "Murid mampu mendeskripsikan secara terpisah komponen DNA, gen, dan kromosom.",
-                                            Relational: "Murid mampu mengorelasikan bahwa gen merupakan fragmen DNA di dalam kromosom.",
-                                            ExtendedAbstract: "Murid mampu memprediksi dampak mutasi pada struktur basa DNA terhadap ekspresi sifat."
-                                        }
-                                    },
-                                    {
-                                        id: "ik2",
-                                        description: "Menganalisis mekanisme penurunan sifat fenotip berdasarkan susunan alel pada persilangan.",
-                                        rubric: {
-                                            Prestructural: "Murid belum mampu membedakan genotip dan fenotip.",
-                                            Unistructural: "Murid mampu memberikan satu contoh fenotip tampak.",
-                                            Multistructural: "Murid dapat mendaftarkan kombinasi genotip homozigot dan heterozigot.",
-                                            Relational: "Murid mampu menghubungkan hukum Mendel dengan rasio fenotip persilangan.",
-                                            ExtendedAbstract: "Murid mampu merancang diagram persilangan dan mengevaluasi kasus intermediat."
+                                            Prestructural: "Murid belum menunjukkan pemahaman yang relevan.",
+                                            Unistructural: "Murid mampu menyebutkan salah satu komponen.",
+                                            Multistructural: "Murid mampu mendeskripsikan secara terpisah.",
+                                            Relational: "Murid mampu mengorelasikan gen dengan DNA.",
+                                            ExtendedAbstract: "Murid mampu memprediksi dampak mutasi."
                                         }
                                     }
                                 ]
@@ -230,13 +217,13 @@
             return { isComplete: true, avgSolo, levelBase, numericScore, isPassing, kktpTarget };
         }
 
-        // --- DASHBOARD VIEW (ORIGINAL ENHANCED DESIGN) ---
+        // --- DASHBOARD VIEW ---
         function DashboardView({ classes, students, curriculum, attendance, assessments, teacher, school, setActiveTab }) {
             const [selectedClassId, setSelectedClassId] = useState("ALL");
 
             const filteredClasses = selectedClassId === "ALL" ? classes : classes.filter(c => c.id === selectedClassId);
-            const filteredStudents = selectedClassId === "ALL" ? students : students.filter(s => s.classId === selectedClassId);
-            const filteredAttendance = selectedClassId === "ALL" ? attendance : attendance.filter(a => a.classId === selectedClassId);
+            const filteredStudents = selectedClassId === "ALL" ? students : students.filter(s => (s.class_id || s.classId) === selectedClassId);
+            const filteredAttendance = selectedClassId === "ALL" ? attendance : attendance.filter(a => (a.class_id || a.classId) === selectedClassId);
 
             const allTps = useMemo(() => {
                 const list = [];
@@ -296,7 +283,6 @@
 
                 return {
                     assessedTpCount,
-                    unassessedTpCount: Math.max(0, allTps.length - assessedTpCount),
                     completionPct,
                     studentsWithScoreCount: totalStudentsWithScore.size,
                     soloDist,
@@ -305,25 +291,6 @@
                 };
             }, [allTps, filteredStudents, assessments, selectedClassId]);
 
-            const reminders = useMemo(() => {
-                const list = [];
-                classes.forEach(c => {
-                    const hasAtt = attendance.some(a => a.classId === c.id);
-                    if (!hasAtt) {
-                        list.push({ type: 'warning', text: `Kelas ${c.name} belum memiliki catatan pertemuan kehadiran.` });
-                    }
-                });
-                allTps.forEach(tp => {
-                    if (!tp.iktps || tp.iktps.length === 0) {
-                        list.push({ type: 'info', text: `TP "${tp.code}" belum memiliki IKTP / Rubrik SOLO.` });
-                    }
-                });
-                if (allTps.length === 0) {
-                    list.push({ type: 'alert', text: 'Kurikulum masih kosong. Tambahkan Capaian Pembelajaran (CP) dan TP.' });
-                }
-                return list;
-            }, [classes, attendance, allTps]);
-
             const todayFormatted = new Date().toLocaleDateString('id-ID', {
                 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             });
@@ -331,182 +298,35 @@
             return (
                 <div className="space-y-6 max-w-7xl mx-auto">
                     <div className="bg-gradient-to-r from-brand-800 via-brand-700 to-indigo-700 text-white p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
-                        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
-                            <i className="fa-solid fa-graduation-cap text-[180px]"></i>
-                        </div>
                         <div className="space-y-2 z-10">
                             <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full border border-white/20">
-                                    <i className="fa-solid fa-school mr-1.5"></i> {school.name}
-                                </span>
-                                <span className="bg-brand-500/40 text-brand-100 font-medium px-3 py-1 rounded-full border border-brand-400/30">
-                                    <i className="fa-solid fa-calendar-days mr-1.5"></i> {todayFormatted}
-                                </span>
-                                <span className="bg-indigo-500/40 text-indigo-100 font-medium px-3 py-1 rounded-full border border-indigo-400/30">
-                                    T.A. 2024/2025 (Ganjil)
-                                </span>
+                                <span className="bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full"><i className="fa-solid fa-school mr-1.5"></i> {school.name}</span>
+                                <span className="bg-brand-500/40 text-brand-100 font-medium px-3 py-1 rounded-full"><i className="fa-solid fa-calendar-days mr-1.5"></i> {todayFormatted}</span>
                             </div>
-                            <h2 className="text-2xl md:text-3xl font-black tracking-tight">
-                                Selamat Datang, {teacher.name || "Bapak/Ibu Guru"}! 👋
-                            </h2>
-                            <p className="text-brand-100 text-xs md:text-sm max-w-2xl leading-relaxed">
-                                SIPAKATAU (Student Growth & Assessment Platform) - Mengelola proses tumbuh kembang murid, presensi, dan konversi Taksonomi SOLO secara presisi (Cloud Supabase Connected).
-                            </p>
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight">Selamat Datang, {teacher.name || "Bapak/Ibu Guru"}! 👋</h2>
+                            <p className="text-brand-100 text-xs md:text-sm max-w-2xl leading-relaxed">SIPAKATAU Cloud Database - Sinkronisasi otomatis ke Supabase aktif.</p>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 z-10 shrink-0">
-                            <button onClick={() => setActiveTab('reports')} className="bg-white text-brand-900 hover:bg-brand-50 font-bold text-xs px-5 py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
-                                <i className="fa-solid fa-file-invoice text-brand-600"></i> Buka Laporan Resmi
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                        <div className="flex items-center gap-2">
-                            <i className="fa-solid fa-filter text-brand-600 text-xs"></i>
-                            <span className="text-xs font-bold text-slate-700">Filter Tampilan Dashboard:</span>
-                        </div>
-                        <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="px-3 py-1.5 border rounded-xl text-xs font-semibold text-slate-800 bg-slate-50 outline-none focus:ring-2 focus:ring-brand-500">
-                            <option value="ALL">Semua Kelas ({classes.length})</option>
-                            {classes.map(c => <option key={c.id} value={c.id}>Kelas {c.name}</option>)}
-                        </select>
+                        <button onClick={() => setActiveTab('reports')} className="bg-white text-brand-900 hover:bg-brand-50 font-bold text-xs px-5 py-3 rounded-2xl shadow-lg transition-all flex items-center gap-2 z-10">
+                            <i className="fa-solid fa-file-invoice text-brand-600"></i> Buka Laporan Resmi
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl font-bold shrink-0"><i className="fa-solid fa-chalkboard-user"></i></div>
-                            <div>
-                                <p className="text-xs text-slate-500 font-medium">Total Kelas</p>
-                                <h3 className="text-2xl font-extrabold text-slate-800">{filteredClasses.length}</h3>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Kelas aktif terdaftar</p>
-                            </div>
+                        <div className="bg-white p-5 rounded-2xl border shadow-xs flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl font-bold"><i className="fa-solid fa-chalkboard-user"></i></div>
+                            <div><p className="text-xs text-slate-500 font-medium">Total Kelas</p><h3 className="text-2xl font-extrabold text-slate-800">{filteredClasses.length}</h3></div>
                         </div>
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold shrink-0"><i className="fa-solid fa-user-graduate"></i></div>
-                            <div>
-                                <p className="text-xs text-slate-500 font-medium">Total Murid</p>
-                                <h3 className="text-2xl font-extrabold text-slate-800">{filteredStudents.length}</h3>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Murid aktif dikelola</p>
-                            </div>
+                        <div className="bg-white p-5 rounded-2xl border shadow-xs flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold"><i className="fa-solid fa-user-graduate"></i></div>
+                            <div><p className="text-xs text-slate-500 font-medium">Total Murid</p><h3 className="text-2xl font-extrabold text-slate-800">{filteredStudents.length}</h3></div>
                         </div>
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0"><i className="fa-solid fa-calendar-check"></i></div>
-                            <div>
-                                <p className="text-xs text-slate-500 font-medium">Sesi Kehadiran</p>
-                                <h3 className="text-2xl font-extrabold text-slate-800">{filteredAttendance.length}</h3>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Pertemuan tercatat</p>
-                            </div>
+                        <div className="bg-white p-5 rounded-2xl border shadow-xs flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold"><i className="fa-solid fa-calendar-check"></i></div>
+                            <div><p className="text-xs text-slate-500 font-medium">Sesi Kehadiran</p><h3 className="text-2xl font-extrabold text-slate-800">{filteredAttendance.length}</h3></div>
                         </div>
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold shrink-0"><i className="fa-solid fa-list-check"></i></div>
-                            <div>
-                                <p className="text-xs text-slate-500 font-medium">TP Dinilai</p>
-                                <h3 className="text-2xl font-extrabold text-slate-800">{assessmentStats.assessedTpCount} <span className="text-xs text-slate-400 font-normal">/ {allTps.length}</span></h3>
-                                <p className="text-[10px] text-emerald-600 font-bold mt-0.5">{assessmentStats.completionPct}% Kelengkapan</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                            <div className="flex justify-between items-center border-b pb-3">
-                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2"><i className="fa-solid fa-user-check text-brand-600"></i> Ringkasan Kehadiran Murid</h3>
-                                <span className="text-xs font-bold bg-brand-50 text-brand-700 px-3 py-1 rounded-full border border-brand-200">{attendanceStats.attendancePct}% Kehadiran Klasikal</span>
-                            </div>
-                            {filteredAttendance.length === 0 ? (
-                                <div className="text-center py-8 space-y-3">
-                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto"><i className="fa-solid fa-calendar-xmark text-lg"></i></div>
-                                    <p className="text-xs text-slate-500 font-medium">Belum ada data catatan kehadiran yang diinput.</p>
-                                    <button onClick={() => setActiveTab('attendance')} className="bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Mulai Input Kehadiran</button>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between text-xs font-semibold text-slate-600"><span>Tingkat Kehadiran (Hadir + Terlambat)</span><span className="font-bold text-slate-800">{attendanceStats.attendancePct}%</span></div>
-                                        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
-                                            <div className="bg-emerald-500 h-full" style={{ width: `${attendanceStats.attendancePct}%` }}></div>
-                                            <div className="bg-rose-400 h-full" style={{ width: `${100 - attendanceStats.attendancePct}%` }}></div>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-5 gap-2 text-center">
-                                        <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-100"><span className="text-[10px] text-emerald-700 font-bold block">Hadir</span><span className="text-base font-extrabold text-emerald-800">{attendanceStats.h}</span></div>
-                                        <div className="p-2.5 rounded-2xl bg-blue-50 border border-blue-100"><span className="text-[10px] text-blue-700 font-bold block">Izin</span><span className="text-base font-extrabold text-blue-800">{attendanceStats.iz}</span></div>
-                                        <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-100"><span className="text-[10px] text-amber-700 font-bold block">Sakit</span><span className="text-base font-extrabold text-amber-800">{attendanceStats.s}</span></div>
-                                        <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-100"><span className="text-[10px] text-rose-700 font-bold block">Alpa</span><span className="text-base font-extrabold text-rose-800">{attendanceStats.a}</span></div>
-                                        <div className="p-2.5 rounded-2xl bg-purple-50 border border-purple-100"><span className="text-[10px] text-purple-700 font-bold block">Telat</span><span className="text-base font-extrabold text-purple-800">{attendanceStats.t}</span></div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                            <div className="flex justify-between items-center border-b pb-3">
-                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2"><i className="fa-solid fa-chart-line text-brand-600"></i> Kelengkapan Penilaian TP</h3>
-                                <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-200">{assessmentStats.completionPct}% Dinilai</span>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 border rounded-2xl bg-slate-50 space-y-1"><span className="text-xs text-slate-500 font-medium">TP Terpenuhi Penilaian:</span><p className="text-lg font-bold text-slate-800">{assessmentStats.assessedTpCount} dari {allTps.length} TP</p></div>
-                                    <div className="p-3 border rounded-2xl bg-slate-50 space-y-1"><span className="text-xs text-slate-500 font-medium">Murid Memiliki Skor:</span><p className="text-lg font-bold text-brand-700">{assessmentStats.studentsWithScoreCount} dari {filteredStudents.length} Murid</p></div>
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="flex justify-between text-xs font-semibold text-slate-600"><span>Tingkat Kelulusan KKTP (Klasikal)</span><span className="font-bold text-emerald-600">{assessmentStats.passRatePct}%</span></div>
-                                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden"><div className="bg-brand-600 h-full" style={{ width: `${assessmentStats.passRatePct}%` }}></div></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2"><i className="fa-solid fa-layer-group text-brand-600"></i> Distribusi Level Taksonomi SOLO</h3>
-                            {assessmentStats.totalEvaluated === 0 ? (
-                                <div className="text-center py-8 space-y-3">
-                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto"><i className="fa-solid fa-chart-column text-lg"></i></div>
-                                    <p className="text-xs text-slate-500">Belum ada data skor SOLO murid yang terekam.</p>
-                                    <button onClick={() => setActiveTab('assessmentInput')} className="bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Mulai Input Penilaian SOLO</button>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {[
-                                        { key: "Prestructural", label: "1. Prestructural", color: "bg-rose-500" },
-                                        { key: "Unistructural", label: "2. Unistructural", color: "bg-amber-500" },
-                                        { key: "Multistructural", label: "3. Multistructural", color: "bg-blue-500" },
-                                        { key: "Relational", label: "4. Relational", color: "bg-indigo-500" },
-                                        { key: "ExtendedAbstract", label: "5. Extended Abstract", color: "bg-emerald-500" }
-                                    ].map(item => {
-                                        const count = assessmentStats.soloDist[item.key] || 0;
-                                        const pct = assessmentStats.totalEvaluated > 0 ? +((count / assessmentStats.totalEvaluated) * 100).toFixed(1) : 0;
-                                        return (
-                                            <div key={item.key} className="space-y-1">
-                                                <div className="flex justify-between text-xs font-semibold text-slate-700"><span>{item.label}</span><span>{count} murid ({pct}%)</span></div>
-                                                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden"><div className={`${item.color} h-full transition-all duration-500`} style={{ width: `${pct}%` }}></div></div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2"><i className="fa-solid fa-bullseye text-brand-600"></i> Ringkasan Tujuan Pembelajaran & Target KKTP</h3>
-                            {allTps.length === 0 ? (
-                                <div className="text-center py-8 space-y-3">
-                                    <p className="text-xs text-slate-500">Belum ada Tujuan Pembelajaran yang dikonfigurasi.</p>
-                                    <button onClick={() => setActiveTab('curriculum')} className="bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl">Kelola Kurikulum</button>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                                    {allTps.map(tp => (
-                                        <div key={tp.id} className="p-3 border rounded-2xl bg-slate-50 flex justify-between items-center text-xs">
-                                            <div className="space-y-0.5 max-w-[70%]">
-                                                <div className="flex items-center gap-2"><span className="font-bold text-brand-700">{tp.code}</span><span className="text-[10px] text-slate-500">({tp.iktps?.length || 0} IKTP)</span></div>
-                                                <p className="text-slate-700 font-medium line-clamp-1">{tp.description}</p>
-                                            </div>
-                                            <div className="text-right"><span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-purple-200 block">KKTP: {tp.kktpLevel || 'Multistructural'}</span></div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                        <div className="bg-white p-5 rounded-2xl border shadow-xs flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold"><i className="fa-solid fa-list-check"></i></div>
+                            <div><p className="text-xs text-slate-500 font-medium">TP Dinilai</p><h3 className="text-2xl font-extrabold text-slate-800">{assessmentStats.assessedTpCount} / {allTps.length}</h3></div>
                         </div>
                     </div>
                 </div>
@@ -514,10 +334,18 @@
         }
 
         // --- IDENTITY VIEW ---
-        function IdentityView({ teacher, setTeacher, school, setSchool, showToast }) {
-            const handleSave = (e) => {
+        function IdentityView({ teacher, setTeacher, school, setSchool, showToast, refreshData }) {
+            const handleSave = async (e) => {
                 e.preventDefault();
-                showToast("Identitas sekolah dan guru berhasil disimpan!");
+                if (supabase) {
+                    const { error } = await supabase.from('settings').upsert([
+                        { id: 1, teacher_data: teacher, school_data: school }
+                    ], { onConflict: 'id' });
+
+                    if (error) { alert("Gagal menyimpan: " + error.message); return; }
+                    await refreshData();
+                }
+                showToast("Identitas sekolah & guru berhasil disimpan!");
             };
 
             const handleLogoUpload = (e) => {
@@ -526,7 +354,7 @@
                     const reader = new FileReader();
                     reader.onloadend = () => {
                         setSchool({ ...school, logoUrl: reader.result });
-                        showToast("Logo sekolah berhasil diunggah!");
+                        showToast("Logo berhasil diunggah!");
                     };
                     reader.readAsDataURL(file);
                 }
@@ -535,17 +363,17 @@
             return (
                 <div className="space-y-6 max-w-4xl">
                     <form onSubmit={handleSave} className="space-y-6">
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2"><i className="fa-solid fa-school text-brand-600"></i> Identitas Sekolah & Kop Laporan</h3>
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3"><i className="fa-solid fa-school text-brand-600 mr-2"></i> Identitas Sekolah</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">Nama Sekolah</label><input type="text" value={school.name} onChange={e => setSchool({...school, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required /></div>
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">NPSN</label><input type="text" value={school.npsn} onChange={e => setSchool({...school, npsn: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
-                                <div className="md:col-span-2"><label className="block text-xs font-semibold text-slate-600 mb-1">Alamat Sekolah</label><input type="text" value={school.address} onChange={e => setSchool({...school, address: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">Nama Kepala Sekolah</label><input type="text" value={school.principalName} onChange={e => setSchool({...school, principalName: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">NIP Kepala Sekolah</label><input type="text" value={school.principalNip} onChange={e => setSchool({...school, principalNip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Nama Sekolah</label><input type="text" value={school.name} onChange={e => setSchool({...school, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
+                                <div><label className="block text-xs font-semibold mb-1">NPSN</label><input type="text" value={school.npsn} onChange={e => setSchool({...school, npsn: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
+                                <div className="md:col-span-2"><label className="block text-xs font-semibold mb-1">Alamat Sekolah</label><input type="text" value={school.address} onChange={e => setSchool({...school, address: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Nama Kepala Sekolah</label><input type="text" value={school.principalName} onChange={e => setSchool({...school, principalName: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">NIP Kepala Sekolah</label><input type="text" value={school.principalNip} onChange={e => setSchool({...school, principalNip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
                             </div>
                             <div className="pt-2 border-t">
-                                <label className="block text-xs font-semibold text-slate-600 mb-2">Logo Sekolah (Kop Laporan)</label>
+                                <label className="block text-xs font-semibold mb-2">Logo Sekolah</label>
                                 <div className="flex items-center gap-4">
                                     {school.logoUrl && <img src={school.logoUrl} className="w-14 h-14 object-contain border rounded-xl p-1 bg-slate-50" />}
                                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-xs text-slate-500" />
@@ -553,21 +381,21 @@
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2"><i className="fa-solid fa-chalkboard-user text-brand-600"></i> Identitas Guru Mata Pelajaran</h3>
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3"><i className="fa-solid fa-chalkboard-user text-brand-600 mr-2"></i> Identitas Guru</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label><input type="text" value={teacher.name} onChange={e => setTeacher({...teacher, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required /></div>
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">NIP</label><input type="text" value={teacher.nip} onChange={e => setTeacher({...teacher, nip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
-                                <div><label className="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label><input type="text" value={teacher.subject} onChange={e => setTeacher({...teacher, subject: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Nama & Gelar</label><input type="text" value={teacher.name} onChange={e => setTeacher({...teacher, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
+                                <div><label className="block text-xs font-semibold mb-1">NIP</label><input type="text" value={teacher.nip} onChange={e => setTeacher({...teacher, nip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Mata Pelajaran</label><input type="text" value={teacher.subject} onChange={e => setTeacher({...teacher, subject: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
                             </div>
                         </div>
-                        <div className="flex justify-end"><button type="submit" className="bg-brand-600 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md">Simpan Identitas</button></div>
+                        <div className="flex justify-end"><button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md">Simpan ke Cloud</button></div>
                     </form>
                 </div>
             );
         }
 
-        // --- CLASSES VIEW (SUPABASE CONNECTED) ---
+        // --- CLASSES VIEW (FIXED REACTIVE REFRESH) ---
         function ClassesView({ classes, showToast, refreshData }) {
             const [className, setClassName] = useState("");
             const [grade, setGrade] = useState("VII");
@@ -580,43 +408,50 @@
 
                 if (supabase) {
                     const { error } = await supabase.from('classes').insert([{ name: className, grade, academic_year: "2024/2025", semester: "Ganjil" }]);
-                    if (error) alert("Gagal menambah kelas: " + error.message);
-                    else refreshData();
+                    if (error) {
+                        alert("Gagal menambah kelas: " + error.message);
+                    } else {
+                        await refreshData();
+                        showToast("Kelas berhasil ditambahkan & disinkronkan!");
+                    }
                 }
-                setClassName(""); setLoading(false);
-                showToast("Kelas berhasil disimpan ke Database Cloud!");
+                setClassName(""); 
+                setLoading(false);
             };
 
             const handleDeleteClass = async (id) => {
                 if (!confirm("Apakah Anda yakin ingin menghapus kelas ini?")) return;
                 if (supabase) {
                     const { error } = await supabase.from('classes').delete().eq('id', id);
-                    if (error) alert("Gagal menghapus: " + error.message);
-                    else refreshData();
+                    if (error) {
+                        alert("Gagal menghapus: " + error.message);
+                    } else {
+                        await refreshData();
+                        showToast("Kelas berhasil dihapus.", "error");
+                    }
                 }
-                showToast("Kelas dihapus.", "error");
             };
 
             return (
                 <div className="space-y-6 max-w-4xl">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Kelas Baru (Supabase Cloud)</h3>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Kelas Baru</h3>
                         <form onSubmit={handleAddClass} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <input type="text" placeholder="Nama Kelas (Misal: VII C)" value={className} onChange={e => setClassName(e.target.value)} className="px-3 py-2 border rounded-xl text-xs outline-none" required />
-                            <select value={grade} onChange={e => setGrade(e.target.value)} className="px-3 py-2 border rounded-xl text-xs outline-none">
+                            <input type="text" placeholder="Nama Kelas (Misal: VII C)" value={className} onChange={e => setClassName(e.target.value)} className="px-3 py-2 border rounded-xl text-xs" required />
+                            <select value={grade} onChange={e => setGrade(e.target.value)} className="px-3 py-2 border rounded-xl text-xs">
                                 <option value="VII">Tingkat VII</option><option value="VIII">Tingkat VIII</option><option value="IX">Tingkat IX</option>
                             </select>
                             <button type="submit" disabled={loading} className="bg-brand-600 text-white font-bold text-xs py-2 rounded-xl shadow-md">{loading ? 'Menyimpan...' : '+ Tambah Kelas'}</button>
                         </form>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">Daftar Kelas</h3>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">Daftar Kelas Aktif ({classes.length})</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {classes.map(c => (
-                                <div key={c.id} className="p-4 border rounded-xl bg-slate-50 flex justify-between items-center">
+                                <div key={c.id} className="p-4 border rounded-xl bg-slate-50 flex justify-between items-center shadow-xs">
                                     <div><h4 className="font-bold text-slate-800 text-sm">{c.name}</h4><p className="text-xs text-slate-500">Tingkat {c.grade}</p></div>
-                                    <button onClick={() => handleDeleteClass(c.id)} className="text-rose-600 p-2"><i className="fa-solid fa-trash text-xs"></i></button>
+                                    <button onClick={() => handleDeleteClass(c.id)} className="text-rose-600 p-2 hover:bg-rose-50 rounded-lg"><i className="fa-solid fa-trash text-xs"></i></button>
                                 </div>
                             ))}
                         </div>
@@ -625,7 +460,7 @@
             );
         }
 
-        // --- STUDENTS VIEW (SUPABASE + EXCEL IMPORT) ---
+        // --- STUDENTS VIEW ---
         function StudentsView({ students, classes, showToast, refreshData }) {
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
             const [name, setName] = useState("");
@@ -633,13 +468,8 @@
             const [nisn, setNisn] = useState("");
             const [gender, setGender] = useState("L");
 
-            const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-            const [importTargetClassId, setImportTargetClassId] = useState(classes[0]?.id || "");
-            const [validationResult, setValidationResult] = useState({ valid: [], invalid: [] });
-
             useEffect(() => {
                 if (classes.length > 0 && !selectedClassId) setSelectedClassId(classes[0].id);
-                if (classes.length > 0 && !importTargetClassId) setImportTargetClassId(classes[0].id);
             }, [classes]);
 
             const handleAdd = async (e) => {
@@ -649,7 +479,7 @@
                 if (supabase) {
                     const { error } = await supabase.from('students').insert([{ class_id: selectedClassId, name, nis, nisn, gender }]);
                     if (error) { alert("Gagal menyimpan: " + error.message); return; }
-                    refreshData();
+                    await refreshData();
                 }
 
                 setName(""); setNis(""); setNisn("");
@@ -661,141 +491,54 @@
                 if (supabase) {
                     const { error } = await supabase.from('students').delete().eq('id', id);
                     if (error) { alert("Gagal menghapus: " + error.message); return; }
-                    refreshData();
+                    await refreshData();
                 }
                 showToast("Murid dihapus.", "error");
-            };
-
-            const downloadTemplate = () => {
-                const templateData = [
-                    ["No", "Nama Lengkap", "NIS", "NISN", "Jenis Kelamin", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Alamat"],
-                    [1, "Andi Ahmad Rivaldi", "24001", "0081234561", "L", classes[0]?.name || "VII A", "Sungguminasa", "2011-05-12", "Jl. Tumanurung No. 5"]
-                ];
-                const ws = XLSX.utils.aoa_to_sheet(templateData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Template_Murid");
-                XLSX.writeFile(wb, "Template_Import_Murid_SIPAKATAU.xlsx");
-            };
-
-            const handleFileUpload = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    try {
-                        const bstr = evt.target.result;
-                        const wb = XLSX.read(bstr, { type: 'binary' });
-                        const ws = wb.Sheets[wb.SheetNames[0]];
-                        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-                        if (data.length <= 1) { alert("File Excel kosong!"); return; }
-
-                        const rows = data.slice(1);
-                        const validList = [];
-                        const invalidList = [];
-
-                        rows.forEach((row, idx) => {
-                            if (!row || row.length === 0 || row.every(c => c === null || String(c).trim() === "")) return;
-                            const rowName = row[1] ? String(row[1]).trim() : "";
-                            const rowNis = row[2] ? String(row[2]).trim() : "";
-                            const rowNisn = row[3] ? String(row[3]).trim() : "";
-                            const rowGender = row[4] ? String(row[4]).trim().toUpperCase() : "L";
-
-                            const errors = [];
-                            if (!rowName) errors.push("Nama kosong");
-                            if (!rowNis) errors.push("NIS kosong");
-
-                            if (errors.length > 0) {
-                                invalidList.push({ rowNo: idx + 2, name: rowName || '-', nis: rowNis || '-', errors });
-                            } else {
-                                validList.push({
-                                    class_id: importTargetClassId,
-                                    name: rowName,
-                                    nis: rowNis,
-                                    nisn: rowNisn,
-                                    gender: (rowGender === 'P' || rowGender === 'PEREMPUAN') ? 'P' : 'L'
-                                });
-                            }
-                        });
-
-                        setValidationResult({ valid: validList, invalid: invalidList });
-                    } catch (err) {
-                        alert("Gagal membaca file Excel.");
-                    }
-                };
-                reader.readAsBinaryString(file);
-            };
-
-            const handleCommitImport = async () => {
-                if (validationResult.valid.length === 0) return;
-
-                if (supabase) {
-                    const { error } = await supabase.from('students').insert(validationResult.valid);
-                    if (error) { alert("Gagal import ke database: " + error.message); return; }
-                    refreshData();
-                }
-
-                showToast(`Berhasil mengimpor ${validationResult.valid.length} data murid!`);
-                setIsImportModalOpen(false);
-                setValidationResult({ valid: [], invalid: [] });
             };
 
             const filtered = students.filter(s => (s.class_id || s.classId) === selectedClassId);
 
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <label className="text-xs font-bold text-slate-600">Pilih Kelas:</label>
-                            <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="px-3 py-2 border rounded-xl text-sm font-semibold outline-none">
-                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button onClick={downloadTemplate} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
-                                <i className="fa-solid fa-download text-brand-600"></i> Download Template Excel
-                            </button>
-                            <button onClick={() => { setIsImportModalOpen(true); setImportTargetClassId(selectedClassId); }} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5">
-                                <i className="fa-solid fa-file-excel"></i> Import Excel
-                            </button>
-                        </div>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm flex items-center gap-3">
+                        <label className="text-xs font-bold text-slate-600">Pilih Kelas:</label>
+                        <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="px-3 py-2 border rounded-xl text-sm font-semibold">
+                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Murid Manual</h3>
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Murid</h3>
                             <form onSubmit={handleAdd} className="space-y-3">
-                                <input type="text" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
-                                <input type="text" placeholder="NIS" value={nis} onChange={e => setNis(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
-                                <input type="text" placeholder="NISN (Opsional)" value={nisn} onChange={e => setNisn(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                <select value={gender} onChange={e => setGender(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
+                                <input type="text" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required />
+                                <input type="text" placeholder="NIS" value={nis} onChange={e => setNis(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required />
+                                <input type="text" placeholder="NISN (Opsional)" value={nisn} onChange={e => setNisn(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" />
+                                <select value={gender} onChange={e => setGender(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">
                                     <option value="L">Laki-laki</option><option value="P">Perempuan</option>
                                 </select>
                                 <button type="submit" className="w-full bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-md">Simpan Murid</button>
                             </form>
                         </div>
 
-                        <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div className="md:col-span-2 bg-white p-6 rounded-2xl border shadow-sm space-y-4">
                             <h3 className="text-base font-bold text-slate-800 border-b pb-3">Daftar Murid ({filtered.length})</h3>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-xs">
-                                    <thead className="bg-slate-100 text-slate-700 font-bold">
-                                        <tr><th className="p-3">No</th><th className="p-3">Nama Lengkap</th><th className="p-3">NIS</th><th className="p-3">L/P</th><th className="p-3 text-right">Aksi</th></tr>
+                                    <thead className="bg-slate-100 font-bold">
+                                        <tr><th className="p-3">No</th><th className="p-3">Nama</th><th className="p-3">NIS</th><th className="p-3">L/P</th><th className="p-3 text-right">Aksi</th></tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y">
                                         {filtered.length === 0 ? (
                                             <tr><td colSpan="5" className="p-4 text-center text-slate-400 italic">Belum ada murid di kelas ini.</td></tr>
                                         ) : (
                                             filtered.map((st, i) => (
                                                 <tr key={st.id} className="hover:bg-slate-50">
                                                     <td className="p-3 font-semibold">{i + 1}</td>
-                                                    <td className="p-3 font-bold text-slate-800">{st.name}</td>
+                                                    <td className="p-3 font-bold">{st.name}</td>
                                                     <td className="p-3 font-mono">{st.nis}</td>
                                                     <td className="p-3">{st.gender}</td>
-                                                    <td className="p-3 text-right">
-                                                        <button onClick={() => handleDelete(st.id)} className="text-rose-600"><i className="fa-solid fa-trash"></i></button>
-                                                    </td>
+                                                    <td className="p-3 text-right"><button onClick={() => handleDelete(st.id)} className="text-rose-600"><i className="fa-solid fa-trash"></i></button></td>
                                                 </tr>
                                             ))
                                         )}
@@ -804,41 +547,11 @@
                             </div>
                         </div>
                     </div>
-
-                    {isImportModalOpen && (
-                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white p-6 rounded-2xl max-w-lg w-full space-y-4">
-                                <div className="flex justify-between items-center border-b pb-3">
-                                    <h3 className="text-base font-bold">Import Excel ke Database</h3>
-                                    <button onClick={() => setIsImportModalOpen(false)}><i className="fa-solid fa-xmark"></i></button>
-                                </div>
-                                <div className="space-y-3 text-xs">
-                                    <div>
-                                        <label className="font-semibold block mb-1">Pilih Kelas Tujuan:</label>
-                                        <select value={importTargetClassId} onChange={e => setImportTargetClassId(e.target.value)} className="w-full p-2 border rounded-xl">
-                                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="font-semibold block mb-1">File Excel (.xlsx):</label>
-                                        <input type="file" accept=".xlsx" onChange={handleFileUpload} className="w-full text-slate-500" />
-                                    </div>
-                                    {validationResult.valid.length > 0 && (
-                                        <p className="text-emerald-700 font-bold">✓ {validationResult.valid.length} data valid siap diimpor.</p>
-                                    )}
-                                </div>
-                                <div className="flex justify-end gap-2 pt-3 border-t">
-                                    <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 border rounded-xl text-xs">Batal</button>
-                                    <button onClick={handleCommitImport} disabled={validationResult.valid.length === 0} className="px-5 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md disabled:bg-slate-300">Simpan Data</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
 
-        // --- ATTENDANCE VIEW (SUPABASE CONNECTED) ---
+        // --- ATTENDANCE VIEW ---
         function AttendanceView({ classes, students, attendanceSessions, showToast, refreshData }) {
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
             const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -873,32 +586,30 @@
                         records
                     }]);
                     if (error) { alert("Gagal menyimpan: " + error.message); return; }
-                    refreshData();
+                    await refreshData();
                 }
-                showToast("Data kehadiran berhasil disimpan ke Cloud!");
+                showToast("Kehadiran berhasil disimpan ke Cloud!");
                 setRecords({}); setMaterial("");
             };
 
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center justify-between">
-                            <span>Input Kehadiran Per Pertemuan</span>
-                            <button onClick={markAllHadir} type="button" className="text-xs bg-emerald-50 text-emerald-700 border font-bold px-3 py-1.5 rounded-lg">✓ Tandai Semua Hadir</button>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                        <h3 className="text-base font-bold border-b pb-3 flex justify-between items-center">
+                            <span>Input Kehadiran</span>
+                            <button onClick={markAllHadir} type="button" className="text-xs bg-emerald-50 text-emerald-700 border font-bold px-3 py-1.5 rounded-lg">✓ Semua Hadir</button>
                         </h3>
-
                         <form onSubmit={handleSaveAttendance} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div><label className="block text-xs font-semibold mb-1">Kelas</label><select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                                <div><label className="block text-xs font-semibold mb-1">Tanggal Pertemuan</label><input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Tanggal</label><input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
                                 <div><label className="block text-xs font-semibold mb-1">Pertemuan Ke-</label><input type="number" min="1" value={sessionNo} onChange={e => setSessionNo(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
-                                <div className="md:col-span-3"><label className="block text-xs font-semibold mb-1">Materi Pembelajaran (Opsional)</label><input type="text" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
+                                <div className="md:col-span-3"><label className="block text-xs font-semibold mb-1">Materi</label><input type="text" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
                             </div>
-
                             <div className="border rounded-xl overflow-x-auto">
                                 <table className="w-full text-left text-xs">
                                     <thead className="bg-slate-100 font-bold">
-                                        <tr><th className="p-3">No</th><th className="p-3">Nama Murid</th><th className="p-3 text-center">Status Kehadiran</th></tr>
+                                        <tr><th className="p-3">No</th><th className="p-3">Nama</th><th className="p-3 text-center">Status</th></tr>
                                     </thead>
                                     <tbody className="divide-y">
                                         {currentStudents.map((st, i) => {
@@ -927,7 +638,7 @@
             );
         }
 
-        // --- CURRICULUM VIEW (ORIGINAL FULL INTERACTIVE CRUD & SOLO RUBRIC) ---
+        // --- CURRICULUM VIEW ---
         function CurriculumView({ curriculum, setCurriculum, showToast }) {
             const [expandedCp, setExpandedCp] = useState({});
             const [expandedMat, setExpandedMat] = useState({});
@@ -941,9 +652,9 @@
                 e.preventDefault();
                 if (modalData.id) {
                     setCurriculum(prev => prev.map(c => c.id === modalData.id ? { ...c, ...modalData } : c));
-                    showToast("Capaian Pembelajaran diperbarui!");
+                    showToast("CP diperbarui!");
                 } else {
-                    const newCp = { id: 'cp_' + Date.now(), subject: modalData.subject || "IPA", phase: modalData.phase || "D", element: modalData.element || "Pemahaman", description: modalData.description || "", materials: [] };
+                    const newCp = { id: 'cp_' + Date.now(), subject: modalData.subject || "IPA", phase: modalData.phase || "D", description: modalData.description || "", materials: [] };
                     setCurriculum(prev => [...prev, newCp]);
                     showToast("CP baru ditambahkan!");
                 }
@@ -951,157 +662,17 @@
             };
 
             const handleDeleteCp = (cpId) => {
-                if (confirm("Hapus CP ini beserta seluruh materinya?")) {
+                if (confirm("Hapus CP ini?")) {
                     setCurriculum(prev => prev.filter(c => c.id !== cpId));
                     showToast("CP dihapus.", "error");
                 }
             };
 
-            const handleSaveMaterial = (e) => {
-                e.preventDefault();
-                const { cpId, id, title } = modalData;
-                setCurriculum(prev => prev.map(cp => {
-                    if (cp.id !== cpId) return cp;
-                    let updatedMats = [...cp.materials];
-                    if (id) updatedMats = updatedMats.map(m => m.id === id ? { ...m, title } : m);
-                    else updatedMats.push({ id: 'm_' + Date.now(), title, tps: [] });
-                    return { ...cp, materials: updatedMats };
-                }));
-                showToast("Materi disimpan!");
-                setActiveModal(null);
-            };
-
-            const handleDeleteMaterial = (cpId, matId) => {
-                if (confirm("Hapus materi ini?")) {
-                    setCurriculum(prev => prev.map(cp => {
-                        if (cp.id !== cpId) return cp;
-                        return { ...cp, materials: cp.materials.filter(m => m.id !== matId) };
-                    }));
-                    showToast("Materi dihapus.", "error");
-                }
-            };
-
-            const handleSaveTp = (e) => {
-                e.preventDefault();
-                const { cpId, matId, id, code, description } = modalData;
-                setCurriculum(prev => prev.map(cp => {
-                    if (cp.id !== cpId) return cp;
-                    const updatedMats = cp.materials.map(m => {
-                        if (m.id !== matId) return m;
-                        let updatedTps = [...m.tps];
-                        if (id) updatedTps = updatedTps.map(t => t.id === id ? { ...t, code, description } : t);
-                        else updatedTps.push({
-                            id: 'tp_' + Date.now(),
-                            code: code || `TP ${updatedTps.length + 1}`,
-                            description,
-                            kktpLevel: "Multistructural",
-                            ranges: { Prestructural: { min: 0, max: 59 }, Unistructural: { min: 60, max: 74 }, Multistructural: { min: 75, max: 83 }, Relational: { min: 84, max: 92 }, ExtendedAbstract: { min: 93, max: 100 } },
-                            iktps: []
-                        });
-                        return { ...m, tps: updatedTps };
-                    });
-                    return { ...cp, materials: updatedMats };
-                }));
-                showToast("TP disimpan!");
-                setActiveModal(null);
-            };
-
-            const handleDeleteTp = (cpId, matId, tpId) => {
-                if (confirm("Hapus TP ini?")) {
-                    setCurriculum(prev => prev.map(cp => {
-                        if (cp.id !== cpId) return cp;
-                        const updatedMats = cp.materials.map(m => {
-                            if (m.id !== matId) return m;
-                            return { ...m, tps: m.tps.filter(t => t.id !== tpId) };
-                        });
-                        return { ...cp, materials: updatedMats };
-                    }));
-                    showToast("TP dihapus.", "error");
-                }
-            };
-
-            const handleSaveIktp = (e) => {
-                e.preventDefault();
-                const { cpId, matId, tpId, id, description, rubric } = modalData;
-                setCurriculum(prev => prev.map(cp => {
-                    if (cp.id !== cpId) return cp;
-                    const updatedMats = cp.materials.map(m => {
-                        if (m.id !== matId) return m;
-                        const updatedTps = m.tps.map(t => {
-                            if (t.id !== tpId) return t;
-                            let updatedIktps = [...t.iktps];
-                            if (id) updatedIktps = updatedIktps.map(ik => ik.id === id ? { ...ik, description, rubric } : ik);
-                            else updatedIktps.push({
-                                id: 'ik_' + Date.now(),
-                                description,
-                                rubric: rubric || { Prestructural: "Belum paham", Unistructural: "Paham 1 aspek", Multistructural: "Paham banyak", Relational: "Menghubungkan", ExtendedAbstract: "Abstraksi" }
-                            });
-                            return { ...t, iktps: updatedIktps };
-                        });
-                        return { ...m, tps: updatedTps };
-                    });
-                    return { ...cp, materials: updatedMats };
-                }));
-                showToast("IKTP & Rubrik SOLO disimpan!");
-                setActiveModal(null);
-            };
-
-            const handleDeleteIktp = (cpId, matId, tpId, iktpId) => {
-                if (confirm("Hapus IKTP ini?")) {
-                    setCurriculum(prev => prev.map(cp => {
-                        if (cp.id !== cpId) return cp;
-                        const updatedMats = cp.materials.map(m => {
-                            if (m.id !== matId) return m;
-                            const updatedTps = m.tps.map(t => {
-                                if (t.id !== tpId) return t;
-                                return { ...t, iktps: t.iktps.filter(ik => ik.id !== iktpId) };
-                            });
-                            return { ...m, tps: updatedTps };
-                        });
-                        return { ...cp, materials: updatedMats };
-                    }));
-                    showToast("IKTP dihapus.", "error");
-                }
-            };
-
-            const handleGenerateIktpAi = (cpId, matId, tp) => {
-                const generatedDescription = `Murid mampu menganalisis implikasi lanjutan dari ${tp.description.toLowerCase().replace('murid mampu ', '')}.`;
-                const generatedRubric = {
-                    Prestructural: `Murid belum mampu menunjukkan pemahaman mengenai ${tp.code}.`,
-                    Unistructural: `Murid dapat mengidentifikasi satu komponen dasar pada ${tp.code}.`,
-                    Multistructural: `Murid dapat mendaftarkan beberapa komponen utama pada ${tp.code}.`,
-                    Relational: `Murid dapat menghubungkan antar komponen pada ${tp.code} secara terintegrasi.`,
-                    ExtendedAbstract: `Murid dapat mengevaluasi dan menggeneralisasi konsep ${tp.code}.`
-                };
-                setModalData({ cpId, matId, tpId: tp.id, description: generatedDescription, rubric: generatedRubric });
-                setActiveModal('iktp');
-                showToast("IKTP & Rubrik SOLO dihasilkan via AI Gemini!");
-            };
-
-            const handleSaveKktp = (e) => {
-                e.preventDefault();
-                const { cpId, matId, tpId, kktpLevel, ranges } = modalData;
-                setCurriculum(prev => prev.map(cp => {
-                    if (cp.id !== cpId) return cp;
-                    const updatedMats = cp.materials.map(m => {
-                        if (m.id !== matId) return m;
-                        const updatedTps = m.tps.map(t => {
-                            if (t.id !== tpId) return t;
-                            return { ...t, kktpLevel, ranges };
-                        });
-                        return { ...m, tps: updatedTps };
-                    });
-                    return { ...cp, materials: updatedMats };
-                }));
-                showToast("KKTP diperbarui!");
-                setActiveModal(null);
-            };
-
             return (
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-2xl border shadow-sm flex justify-between items-center">
-                        <div><h3 className="text-base font-bold">Struktur Kurikulum Bertingkat & Rubrik SOLO</h3><p className="text-xs text-slate-500">Kelola CP, Materi, TP, IKTP, Rubrik SOLO, dan KKTP secara mandiri.</p></div>
-                        <button onClick={() => { setModalData({}); setActiveModal('cp'); }} className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md">+ Tambah CP Baru</button>
+                        <div><h3 className="text-base font-bold">Kurikulum & Rubrik SOLO</h3><p className="text-xs text-slate-500">Kelola Capaian Pembelajaran & TP</p></div>
+                        <button onClick={() => { setModalData({}); setActiveModal('cp'); }} className="bg-brand-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl">+ Tambah CP</button>
                     </div>
 
                     <div className="space-y-4">
@@ -1112,149 +683,20 @@
                                         <i className={`fa-solid ${expandedCp[cp.id] ? 'fa-chevron-down' : 'fa-chevron-right'} text-brand-300 text-xs`}></i>
                                         <div><span className="bg-brand-500/30 text-brand-200 text-[10px] font-bold px-2 py-0.5 rounded mr-2">Fase {cp.phase}</span><span className="font-bold text-sm">{cp.subject}</span><p className="text-xs text-slate-300 mt-0.5">{cp.description}</p></div>
                                     </div>
-                                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                                        <button onClick={() => { setModalData({ cpId: cp.id }); setActiveModal('material'); }} className="bg-brand-600 hover:bg-brand-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg">+ Materi</button>
-                                        <button onClick={() => { setModalData(cp); setActiveModal('cp'); }} className="text-slate-300 p-1.5"><i className="fa-solid fa-pen text-xs"></i></button>
-                                        <button onClick={() => handleDeleteCp(cp.id)} className="text-rose-400 p-1.5"><i className="fa-solid fa-trash text-xs"></i></button>
-                                    </div>
+                                    <button onClick={() => handleDeleteCp(cp.id)} className="text-rose-400 p-1.5"><i className="fa-solid fa-trash text-xs"></i></button>
                                 </div>
-                                {expandedCp[cp.id] && (
-                                    <div className="p-4 bg-slate-50 space-y-4">
-                                        {cp.materials.map(mat => (
-                                            <div key={mat.id} className="bg-white border rounded-xl overflow-hidden shadow-xs">
-                                                <div className="p-3 bg-slate-100 flex justify-between items-center cursor-pointer" onClick={() => toggleMat(mat.id)}>
-                                                    <span className="font-bold text-xs text-slate-800">Materi: {mat.title}</span>
-                                                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                                                        <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id }); setActiveModal('tp'); }} className="bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1 rounded">+ TP</button>
-                                                        <button onClick={() => { setModalData({ cpId: cp.id, id: mat.id, title: mat.title }); setActiveModal('material'); }} className="text-slate-500 p-1"><i className="fa-solid fa-pen text-xs"></i></button>
-                                                        <button onClick={() => handleDeleteMaterial(cp.id, mat.id)} className="text-rose-600 p-1"><i className="fa-solid fa-trash text-xs"></i></button>
-                                                    </div>
-                                                </div>
-                                                {expandedMat[mat.id] && (
-                                                    <div className="p-3 space-y-3">
-                                                        {mat.tps.map(tp => (
-                                                            <div key={tp.id} className="border border-brand-100 rounded-xl p-3 bg-brand-50/30 space-y-3">
-                                                                <div className="flex justify-between items-start gap-2">
-                                                                    <div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="font-bold text-xs text-brand-700">{tp.code}</span>
-                                                                            <span className="bg-purple-100 text-purple-700 font-bold text-[10px] px-2 py-0.5 rounded-full">KKTP: {tp.kktpLevel || "Multistructural"}</span>
-                                                                        </div>
-                                                                        <p className="text-xs text-slate-700 font-medium mt-1">{tp.description}</p>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <button onClick={() => handleGenerateIktpAi(cp.id, mat.id, tp)} className="bg-purple-600 text-white font-bold text-[10px] px-2 py-1 rounded flex items-center gap-1"><i className="fa-solid fa-wand-magic-sparkles"></i> AI IKTP</button>
-                                                                        <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, tpId: tp.id }); setActiveModal('iktp'); }} className="bg-slate-200 text-slate-700 font-bold text-[10px] px-2 py-1 rounded">+ IKTP</button>
-                                                                        <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, tpId: tp.id, kktpLevel: tp.kktpLevel, ranges: tp.ranges }); setActiveModal('kktp'); }} className="bg-amber-100 text-amber-800 font-bold text-[10px] px-2 py-1 rounded">Set KKTP</button>
-                                                                        <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, ...tp }); setActiveModal('tp'); }} className="text-slate-500 p-1"><i className="fa-solid fa-pen text-xs"></i></button>
-                                                                        <button onClick={() => handleDeleteTp(cp.id, mat.id, tp.id)} className="text-rose-600 p-1"><i className="fa-solid fa-trash text-xs"></i></button>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="space-y-2 pt-2 border-t border-brand-100">
-                                                                    {tp.iktps.map((ik, ikIdx) => (
-                                                                        <div key={ik.id} className="bg-white p-3 rounded-lg border text-xs space-y-2">
-                                                                            <div className="flex justify-between items-center">
-                                                                                <span className="font-bold text-slate-800">IKTP {ikIdx + 1}: {ik.description}</span>
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, tpId: tp.id, ...ik }); setActiveModal('iktp'); }} className="text-brand-600 font-bold text-[10px] hover:underline">Edit Rubrik</button>
-                                                                                    <button onClick={() => handleDeleteIktp(cp.id, mat.id, tp.id, ik.id)} className="text-rose-600 p-1"><i className="fa-solid fa-trash"></i></button>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="grid grid-cols-1 md:grid-cols-5 gap-1.5 text-[10px]">
-                                                                                <div className="p-2 bg-rose-50 border rounded"><span className="font-bold text-rose-800 block">1. Prestructural</span><p className="text-slate-600">{ik.rubric?.Prestructural || '-'}</p></div>
-                                                                                <div className="p-2 bg-amber-50 border rounded"><span className="font-bold text-amber-800 block">2. Unistructural</span><p className="text-slate-600">{ik.rubric?.Unistructural || '-'}</p></div>
-                                                                                <div className="p-2 bg-blue-50 border rounded"><span className="font-bold text-blue-800 block">3. Multistructural</span><p className="text-slate-600">{ik.rubric?.Multistructural || '-'}</p></div>
-                                                                                <div className="p-2 bg-indigo-50 border rounded"><span className="font-bold text-indigo-800 block">4. Relational</span><p className="text-slate-600">{ik.rubric?.Relational || '-'}</p></div>
-                                                                                <div className="p-2 bg-emerald-50 border rounded"><span className="font-bold text-emerald-800 block">5. Extended Abstract</span><p className="text-slate-600">{ik.rubric?.ExtendedAbstract || '-'}</p></div>
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         ))}
                     </div>
 
-                    {/* MODAL CP */}
                     {activeModal === 'cp' && (
                         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
                             <div className="bg-white p-6 rounded-2xl max-w-lg w-full space-y-4">
-                                <h3 className="text-base font-bold border-b pb-3">Form Capaian Pembelajaran (CP)</h3>
+                                <h3 className="text-base font-bold border-b pb-3">Form CP</h3>
                                 <form onSubmit={handleSaveCp} className="space-y-3 text-xs">
                                     <div><label className="font-semibold block mb-1">Mata Pelajaran</label><input type="text" value={modalData.subject || ''} onChange={e => setModalData({...modalData, subject: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
                                     <div><label className="font-semibold block mb-1">Fase</label><input type="text" value={modalData.phase || 'D'} onChange={e => setModalData({...modalData, phase: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
-                                    <div><label className="font-semibold block mb-1">Deskripsi CP</label><textarea rows="3" value={modalData.description || ''} onChange={e => setModalData({...modalData, description: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
-                                    <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl">Batal</button><button type="submit" className="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl shadow-md">Simpan CP</button></div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* MODAL MATERIAL */}
-                    {activeModal === 'material' && (
-                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white p-6 rounded-2xl max-w-md w-full space-y-4">
-                                <h3 className="text-base font-bold border-b pb-3">Form Materi Pembelajaran</h3>
-                                <form onSubmit={handleSaveMaterial} className="space-y-3 text-xs">
-                                    <div><label className="font-semibold block mb-1">Judul Materi</label><input type="text" value={modalData.title || ''} onChange={e => setModalData({...modalData, title: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
-                                    <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl">Batal</button><button type="submit" className="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl">Simpan Materi</button></div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* MODAL TP */}
-                    {activeModal === 'tp' && (
-                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white p-6 rounded-2xl max-w-md w-full space-y-4">
-                                <h3 className="text-base font-bold border-b pb-3">Form Tujuan Pembelajaran (TP)</h3>
-                                <form onSubmit={handleSaveTp} className="space-y-3 text-xs">
-                                    <div><label className="font-semibold block mb-1">Kode TP (Misal: TP 1)</label><input type="text" value={modalData.code || ''} onChange={e => setModalData({...modalData, code: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
-                                    <div><label className="font-semibold block mb-1">Deskripsi TP</label><textarea rows="3" value={modalData.description || ''} onChange={e => setModalData({...modalData, description: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
-                                    <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl">Batal</button><button type="submit" className="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl">Simpan TP</button></div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* MODAL IKTP */}
-                    {activeModal === 'iktp' && (
-                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-                            <div className="bg-white p-6 rounded-2xl max-w-3xl w-full space-y-4 my-8">
-                                <h3 className="text-base font-bold border-b pb-3">Edit IKTP & Rubrik SOLO</h3>
-                                <form onSubmit={handleSaveIktp} className="space-y-4 text-xs">
-                                    <div><label className="font-semibold block mb-1">Rumusan IKTP</label><input type="text" value={modalData.description || ''} onChange={e => setModalData({...modalData, description: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
-                                    <div className="space-y-2">
-                                        <p className="font-bold">Deskripsi Rubrik SOLO 5 Level:</p>
-                                        {["Prestructural", "Unistructural", "Multistructural", "Relational", "ExtendedAbstract"].map((lvl) => (
-                                            <div key={lvl} className="p-2 border rounded bg-slate-50"><label className="font-bold block mb-1">{lvl}</label><textarea rows="2" value={modalData.rubric?.[lvl] || ''} onChange={e => setModalData({...modalData, rubric: {...modalData.rubric, [lvl]: e.target.value}})} className="w-full p-2 border rounded" required /></div>
-                                        ))}
-                                    </div>
-                                    <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl">Batal</button><button type="submit" className="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl">Simpan Rubrik</button></div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* MODAL KKTP */}
-                    {activeModal === 'kktp' && (
-                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white p-6 rounded-2xl max-w-md w-full space-y-4 text-xs">
-                                <h3 className="text-base font-bold border-b pb-3">Pengaturan KKTP</h3>
-                                <form onSubmit={handleSaveKktp} className="space-y-3">
-                                    <div>
-                                        <label className="font-semibold block mb-1">Target KKTP:</label>
-                                        <select value={modalData.kktpLevel || 'Multistructural'} onChange={e => setModalData({...modalData, kktpLevel: e.target.value})} className="w-full p-2 border rounded-xl font-bold">
-                                            <option value="Prestructural">Prestructural</option><option value="Unistructural">Unistructural</option><option value="Multistructural">Multistructural</option><option value="Relational">Relational</option><option value="ExtendedAbstract">Extended Abstract</option>
-                                        </select>
-                                    </div>
+                                    <div><label className="font-semibold block mb-1">Deskripsi</label><textarea rows="3" value={modalData.description || ''} onChange={e => setModalData({...modalData, description: e.target.value})} className="w-full p-2 border rounded-xl" required /></div>
                                     <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl">Batal</button><button type="submit" className="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl">Simpan</button></div>
                                 </form>
                             </div>
@@ -1264,7 +706,7 @@
             );
         }
 
-        // --- ASSESSMENT INPUT VIEW (SUPABASE CONNECTED) ---
+        // --- ASSESSMENT INPUT VIEW ---
         function AssessmentInputView({ classes, students, curriculum, assessments, showToast, refreshData }) {
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
             const [selectedTpId, setSelectedTpId] = useState("");
@@ -1275,7 +717,7 @@
 
             const currentStudents = students.filter(s => (s.class_id || s.classId) === selectedClassId);
             const allTps = [];
-            curriculum.forEach(cp => cp.materials.forEach(m => m.tps.forEach(tp => allTps.push(tp))));
+            curriculum.forEach(cp => (cp.materials || []).forEach(m => (m.tps || []).forEach(tp => allTps.push(tp))));
             const selectedTp = allTps.find(t => t.id === selectedTpId) || allTps[0];
 
             const currentScores = assessments[`${selectedClassId}_${selectedTp?.id}`] || {};
@@ -1295,9 +737,9 @@
                     }], { onConflict: 'class_id,tp_id,student_id' });
 
                     if (error) console.error("Gagal simpan skor:", error.message);
-                    else refreshData();
+                    else await refreshData();
                 }
-                showToast("Nilai SOLO tersimpan di Cloud!");
+                showToast("Nilai SOLO tersimpan!");
             };
 
             return (
@@ -1305,8 +747,8 @@
                     <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
                         <h3 className="text-base font-bold">Input Penilaian Rubrik SOLO</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label className="text-xs font-semibold block mb-1">Pilih Kelas</label><select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                            <div><label className="text-xs font-semibold block mb-1">Pilih TP</label><select value={selectedTpId || selectedTp?.id} onChange={e => setSelectedTpId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{allTps.map(tp => <option key={tp.id} value={tp.id}>[{tp.code}] {tp.description.slice(0, 40)}...</option>)}</select></div>
+                            <div><label className="text-xs font-semibold block mb-1">Kelas</label><select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+                            <div><label className="text-xs font-semibold block mb-1">TP</label><select value={selectedTpId || selectedTp?.id} onChange={e => setSelectedTpId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{allTps.map(tp => <option key={tp.id} value={tp.id}>[{tp.code}] {tp.description?.slice(0, 40)}...</option>)}</select></div>
                         </div>
                     </div>
 
@@ -1315,7 +757,7 @@
                             <h4 className="font-bold text-sm text-slate-800">{selectedTp.code}: {selectedTp.description}</h4>
                             <table className="w-full text-left text-xs border-collapse">
                                 <thead className="bg-slate-100 font-bold">
-                                    <tr><th className="p-3 border">No</th><th className="p-3 border">Nama Murid</th>{selectedTp.iktps.map((ik, idx) => <th key={ik.id} className="p-3 border">IKTP {idx + 1}</th>)}<th className="p-3 border text-center">Rata-rata</th><th className="p-3 border text-center">Angka</th></tr>
+                                    <tr><th className="p-3 border">No</th><th className="p-3 border">Nama</th>{(selectedTp.iktps || []).map((ik, idx) => <th key={ik.id} className="p-3 border">IKTP {idx + 1}</th>)}<th className="p-3 border text-center">Rata-rata</th><th className="p-3 border text-center">Angka</th></tr>
                                 </thead>
                                 <tbody className="divide-y">
                                     {currentStudents.map((st, i) => {
@@ -1325,7 +767,7 @@
                                             <tr key={st.id}>
                                                 <td className="p-3 border font-semibold">{i + 1}</td>
                                                 <td className="p-3 border font-bold">{st.name}</td>
-                                                {selectedTp.iktps.map(ik => (
+                                                {(selectedTp.iktps || []).map(ik => (
                                                     <td key={ik.id} className="p-3 border">
                                                         <select value={studentScores[ik.id] || 0} onChange={e => handleScoreSelect(st.id, ik.id, Number(e.target.value))} className="w-full px-2 py-1 border rounded text-[11px]">
                                                             <option value={0}>-- Pilih --</option>
@@ -1361,8 +803,6 @@
 
             const currentStudents = students.filter(s => (s.class_id || s.classId) === selectedClassId);
             const currentClass = classes.find(c => c.id === selectedClassId);
-            const allTps = [];
-            curriculum.forEach(cp => cp.materials.forEach(m => m.tps.forEach(tp => allTps.push(tp))));
 
             return (
                 <div className="space-y-6">
@@ -1373,7 +813,6 @@
                         </div>
                         <div className="flex border-b text-xs font-bold gap-4">
                             <button onClick={() => setActiveSubTab("attendance")} className={`pb-2 ${activeSubTab === 'attendance' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>1. Kehadiran</button>
-                            <button onClick={() => setActiveSubTab("classScores")} className={`pb-2 ${activeSubTab === 'classScores' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>2. Nilai Kelas</button>
                         </div>
                         <div>
                             <label className="text-[11px] font-bold block mb-1">Kelas</label>
@@ -1393,64 +832,35 @@
                             </div>
                         </div>
 
-                        {activeSubTab === "attendance" && (
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-sm text-center uppercase">REKAP KEHADIRAN KELAS {currentClass?.name}</h3>
-                                <table className="w-full text-left text-xs border-collapse">
-                                    <thead className="bg-slate-100 font-bold border">
-                                        <tr><th className="p-2 border">No</th><th className="p-2 border">Nama</th><th className="p-2 border">NIS</th><th className="p-2 border text-center">Hadir</th><th className="p-2 border text-center">Izin</th><th className="p-2 border text-center">Sakit</th><th className="p-2 border text-center">Alpa</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {currentStudents.map((st, i) => {
-                                            const sessions = attendanceSessions.filter(a => (a.class_id || a.classId) === selectedClassId);
-                                            let h=0, iz=0, s=0, a=0;
-                                            sessions.forEach(sess => {
-                                                const stt = sess.records?.[st.id] || "Hadir";
-                                                if (stt === "Hadir") h++; else if (stt === "Izin") iz++; else if (stt === "Sakit") s++; else if (stt === "Alpa") a++;
-                                            });
-                                            return (
-                                                <tr key={st.id}>
-                                                    <td className="p-2 border">{i + 1}</td>
-                                                    <td className="p-2 border font-bold">{st.name}</td>
-                                                    <td className="p-2 border font-mono">{st.nis}</td>
-                                                    <td className="p-2 border text-center text-emerald-700 font-bold">{h}</td>
-                                                    <td className="p-2 border text-center text-blue-700">{iz}</td>
-                                                    <td className="p-2 border text-center text-amber-700">{s}</td>
-                                                    <td className="p-2 border text-center text-rose-700">{a}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-
-                        {activeSubTab === "classScores" && (
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-sm text-center uppercase">REKAP NILAI TAKSONOMI SOLO - {currentClass?.name}</h3>
-                                <table className="w-full text-left text-xs border-collapse">
-                                    <thead className="bg-slate-100 font-bold border">
-                                        <tr><th className="p-2 border">No</th><th className="p-2 border">Nama</th><th className="p-2 border">NIS</th><th className="p-2 border text-center">Rata-rata SOLO</th><th className="p-2 border text-center">Nilai Angka</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {currentStudents.map((st, i) => {
-                                            const tp = allTps[0];
-                                            const studentScores = assessments[`${selectedClassId}_${tp?.id}`]?.[st.id] || {};
-                                            const calc = tp ? calculateSoloScore(studentScores, tp) : null;
-                                            return (
-                                                <tr key={st.id}>
-                                                    <td className="p-2 border">{i + 1}</td>
-                                                    <td className="p-2 border font-bold">{st.name}</td>
-                                                    <td className="p-2 border font-mono">{st.nis}</td>
-                                                    <td className="p-2 border text-center font-bold">{calc?.isComplete ? calc.avgSolo : '-'}</td>
-                                                    <td className="p-2 border text-center font-bold text-brand-700">{calc?.isComplete ? calc.numericScore : '-'}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-sm text-center uppercase">REKAP KEHADIRAN KELAS {currentClass?.name}</h3>
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead className="bg-slate-100 font-bold border">
+                                    <tr><th className="p-2 border">No</th><th className="p-2 border">Nama</th><th className="p-2 border">NIS</th><th className="p-2 border text-center">Hadir</th><th className="p-2 border text-center">Izin</th><th className="p-2 border text-center">Sakit</th><th className="p-2 border text-center">Alpa</th></tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {currentStudents.map((st, i) => {
+                                        const sessions = attendanceSessions.filter(a => (a.class_id || a.classId) === selectedClassId);
+                                        let h=0, iz=0, s=0, a=0;
+                                        sessions.forEach(sess => {
+                                            const stt = sess.records?.[st.id] || "Hadir";
+                                            if (stt === "Hadir") h++; else if (stt === "Izin") iz++; else if (stt === "Sakit") s++; else if (stt === "Alpa") a++;
+                                        });
+                                        return (
+                                            <tr key={st.id}>
+                                                <td className="p-2 border">{i + 1}</td>
+                                                <td className="p-2 border font-bold">{st.name}</td>
+                                                <td className="p-2 border font-mono">{st.nis}</td>
+                                                <td className="p-2 border text-center text-emerald-700 font-bold">{h}</td>
+                                                <td className="p-2 border text-center text-blue-700">{iz}</td>
+                                                <td className="p-2 border text-center text-amber-700">{s}</td>
+                                                <td className="p-2 border text-center text-rose-700">{a}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
 
                         <div className="pt-8 grid grid-cols-2 text-center text-xs gap-8 border-t mt-8">
                             <div><p>Kepala Sekolah</p><div className="h-16"></div><p className="font-bold underline">{school.principalName}</p></div>
@@ -1480,6 +890,13 @@
 
             const refreshData = async () => {
                 if (!supabase) return;
+
+                const { data: settingsData } = await supabase.from('settings').select('*').eq('id', 1).single();
+                if (settingsData) {
+                    if (settingsData.teacher_data) setTeacher(settingsData.teacher_data);
+                    if (settingsData.school_data) setSchool(settingsData.school_data);
+                }
+
                 const { data: classData } = await supabase.from('classes').select('*');
                 if (classData && classData.length > 0) setClasses(classData);
 
@@ -1544,7 +961,7 @@
 
                     <main className="flex-1 p-4 md:p-8 overflow-y-auto">
                         {activeTab === 'dashboard' && <DashboardView classes={classes} students={students} curriculum={curriculum} attendance={attendanceSessions} assessments={assessments} teacher={teacher} school={school} setActiveTab={setActiveTab} />}
-                        {activeTab === 'identity' && <IdentityView teacher={teacher} setTeacher={setTeacher} school={school} setSchool={setSchool} showToast={showToast} />}
+                        {activeTab === 'identity' && <IdentityView teacher={teacher} setTeacher={setTeacher} school={school} setSchool={setSchool} showToast={showToast} refreshData={refreshData} />}
                         {activeTab === 'classes' && <ClassesView classes={classes} showToast={showToast} refreshData={refreshData} />}
                         {activeTab === 'students' && <StudentsView students={students} classes={classes} showToast={showToast} refreshData={refreshData} />}
                         {activeTab === 'attendance' && <AttendanceView classes={classes} students={students} attendanceSessions={attendanceSessions} showToast={showToast} refreshData={refreshData} />}
