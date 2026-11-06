@@ -30,7 +30,7 @@
         }
     </script>
 
-    <!-- Font Inter & FontAwesome Icons -->
+    <!-- FontInter & FontAwesome Icons -->
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -59,13 +59,7 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
-    <div id="root">
-        <!-- Tampilan Loading Awal saat React Memuat -->
-        <div class="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-900 text-white">
-            <div class="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p class="text-sm font-bold tracking-wider">Memuat SIPAKATAU...</p>
-        </div>
-    </div>
+    <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
@@ -73,7 +67,6 @@
         const SUPABASE_URL = "https://svdivcxljkjflqxjkwbt.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_Pd27xMnIpNy5VuUpJ8aBIA_Iv0Wi7yM";
         
-        // Inisialisasi Supabase yang Aman (Mencegah Error Null)
         let supabase = null;
         try {
             if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -81,10 +74,9 @@
             } else if (window.Supabase && typeof window.Supabase.createClient === 'function') {
                 supabase = window.Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             }
-        } catch (err) {
-            console.warn("Supabase init deferred or fallback to local mode:", err);
+        } catch (e) {
+            console.warn("Supabase initialization deferred:", e);
         }
-
         const DEFAULT_TEACHER = {
             name: "Hasdinar, S.Pd.",
             title: "S.Pd.",
@@ -232,14 +224,16 @@
             return { isComplete: true, avgSolo, levelBase, numericScore, isPassing, kktpTarget };
         }
 
-        // --- DASHBOARD VIEW ---
+        // --- DASHBOARD VIEW (ENHANCED COMPLETE DASHBOARD) ---
         function DashboardView({ classes, students, curriculum, attendance, assessments, teacher, school, setActiveTab }) {
             const [selectedClassId, setSelectedClassId] = useState("ALL");
 
+            // Aggregate Data & Filter By Class
             const filteredClasses = selectedClassId === "ALL" ? classes : classes.filter(c => c.id === selectedClassId);
             const filteredStudents = selectedClassId === "ALL" ? students : students.filter(s => s.classId === selectedClassId);
             const filteredAttendance = selectedClassId === "ALL" ? attendance : attendance.filter(a => a.classId === selectedClassId);
 
+            // Flatten all TPs across CP & Materials
             const allTps = useMemo(() => {
                 const list = [];
                 curriculum.forEach(cp => {
@@ -252,6 +246,7 @@
                 return list;
             }, [curriculum]);
 
+            // Calculate Attendance Metrics
             const attendanceStats = useMemo(() => {
                 let h = 0, iz = 0, s = 0, a = 0, t = 0;
                 filteredAttendance.forEach(sess => {
@@ -268,6 +263,7 @@
                 return { h, iz, s, a, t, totalRecords, attendancePct };
             }, [filteredAttendance]);
 
+            // Calculate SOLO Level & Assessment Distribution
             const assessmentStats = useMemo(() => {
                 let assessedTpCount = 0;
                 let totalStudentsWithScore = new Set();
@@ -278,6 +274,7 @@
                 allTps.forEach(tp => {
                     let isTpAssessed = false;
                     filteredStudents.forEach(st => {
+                        // find matching key in assessments
                         const matchKey = Object.keys(assessments).find(k => k.endsWith(`_${tp.id}`) && (selectedClassId === "ALL" || k.startsWith(`${selectedClassId}_`)));
                         if (matchKey && assessments[matchKey]?.[st.id]) {
                             const calc = calculateSoloScore(assessments[matchKey][st.id], tp);
@@ -307,14 +304,17 @@
                 };
             }, [allTps, filteredStudents, assessments, selectedClassId]);
 
+            // Dynamic Reminders & Action Alerts
             const reminders = useMemo(() => {
                 const list = [];
+                // Check classes without attendance
                 classes.forEach(c => {
                     const hasAtt = attendance.some(a => a.classId === c.id);
                     if (!hasAtt) {
                         list.push({ type: 'warning', text: `Kelas ${c.name} belum memiliki catatan pertemuan kehadiran.` });
                     }
                 });
+                // Check unconfigured TPs
                 allTps.forEach(tp => {
                     if (!tp.iktps || tp.iktps.length === 0) {
                         list.push({ type: 'info', text: `TP "${tp.code}" belum memiliki IKTP / Rubrik SOLO.` });
@@ -326,8 +326,12 @@
                 return list;
             }, [classes, attendance, allTps]);
 
+            // Formatted Date String
             const todayFormatted = new Date().toLocaleDateString('id-ID', {
-                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
             });
 
             return (
@@ -353,20 +357,20 @@
                                 Selamat Datang, {teacher.name || "Bapak/Ibu Guru"}! 👋
                             </h2>
                             <p className="text-brand-100 text-xs md:text-sm max-w-2xl leading-relaxed">
-                                SIPAKATAU (Student Growth & Assessment Platform) - Mengelola presensi, rubrik Taksonomi SOLO, dan penilaian murid.
+                                SIPAKATAU (Student Growth & Assessment Platform) - Mengelola proses tumbuh kembang murid, presensi, dan konversi Taksonomi SOLO secara presisi.
                             </p>
                         </div>
-                        <div className="flex z-10 shrink-0">
+                        <div className="flex flex-col sm:flex-row gap-3 z-10 shrink-0">
                             <button 
                                 onClick={() => setActiveTab('reports')} 
-                                className="bg-white text-brand-900 hover:bg-brand-50 font-bold text-xs px-5 py-3 rounded-2xl shadow-lg transition-all flex items-center gap-2"
+                                className="bg-white text-brand-900 hover:bg-brand-50 font-bold text-xs px-5 py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
                             >
                                 <i className="fa-solid fa-file-invoice text-brand-600"></i> Buka Laporan Resmi
                             </button>
                         </div>
                     </div>
 
-                    {/* FILTER DASHBOARD */}
+                    {/* FILTER GLOBAL DASHBOARD */}
                     <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
                         <div className="flex items-center gap-2">
                             <i className="fa-solid fa-filter text-brand-600 text-xs"></i>
@@ -382,39 +386,42 @@
                         </select>
                     </div>
 
-                    {/* BARIS 2: KARTU STATISTIK */}
+                    {/* BARIS 2: KARTU RINGKASAN STATISTIK */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-xl font-bold shrink-0">
                                 <i className="fa-solid fa-chalkboard-user"></i>
                             </div>
                             <div>
                                 <p className="text-xs text-slate-500 font-medium">Total Kelas</p>
                                 <h3 className="text-2xl font-extrabold text-slate-800">{filteredClasses.length}</h3>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Kelas aktif terdaftar</p>
                             </div>
                         </div>
 
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold shrink-0">
                                 <i className="fa-solid fa-user-graduate"></i>
                             </div>
                             <div>
                                 <p className="text-xs text-slate-500 font-medium font-medium">Total Murid</p>
                                 <h3 className="text-2xl font-extrabold text-slate-800">{filteredStudents.length}</h3>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Murid aktif dikelola</p>
                             </div>
                         </div>
 
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0">
                                 <i className="fa-solid fa-calendar-check"></i>
                             </div>
                             <div>
                                 <p className="text-xs text-slate-500 font-medium">Sesi Kehadiran</p>
                                 <h3 className="text-2xl font-extrabold text-slate-800">{filteredAttendance.length}</h3>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Pertemuan tercatat</p>
                             </div>
                         </div>
 
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold shrink-0">
                                 <i className="fa-solid fa-list-check"></i>
                             </div>
@@ -423,12 +430,14 @@
                                 <h3 className="text-2xl font-extrabold text-slate-800">
                                     {assessmentStats.assessedTpCount} <span className="text-xs text-slate-400 font-normal">/ {allTps.length}</span>
                                 </h3>
+                                <p className="text-[10px] text-emerald-600 font-bold mt-0.5">{assessmentStats.completionPct}% Kelengkapan</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* BARIS 3: RINGKASAN KEHADIRAN & PENILAIAN */}
+                    {/* BARIS 3: RINGKASAN KEHADIRAN & KELENGKAPAN PENILAIAN */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* PANEL KEHADIRAN */}
                         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
                             <div className="flex justify-between items-center border-b pb-3">
                                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -441,28 +450,59 @@
 
                             {filteredAttendance.length === 0 ? (
                                 <div className="text-center py-8 space-y-3">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto">
+                                        <i className="fa-solid fa-calendar-xmark text-lg"></i>
+                                    </div>
                                     <p className="text-xs text-slate-500 font-medium">Belum ada data catatan kehadiran yang diinput.</p>
-                                    <button onClick={() => setActiveTab('attendance')} className="bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                                    <button 
+                                        onClick={() => setActiveTab('attendance')} 
+                                        className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all"
+                                    >
                                         Mulai Input Kehadiran
                                     </button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
-                                        <div className="bg-emerald-500 h-full" style={{ width: `${attendanceStats.attendancePct}%` }}></div>
-                                        <div className="bg-rose-400 h-full" style={{ width: `${100 - attendanceStats.attendancePct}%` }}></div>
+                                    {/* PROGRESS BAR KEHADIRAN */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-xs font-semibold text-slate-600">
+                                            <span>Tingkat Kehadiran (Hadir + Terlambat)</span>
+                                            <span className="font-bold text-slate-800">{attendanceStats.attendancePct}%</span>
+                                        </div>
+                                        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
+                                            <div className="bg-emerald-500 h-full" style={{ width: `${attendanceStats.attendancePct}%` }}></div>
+                                            <div className="bg-rose-400 h-full" style={{ width: `${100 - attendanceStats.attendancePct}%` }}></div>
+                                        </div>
                                     </div>
+
+                                    {/* STATUS BREAKDOWN GRID */}
                                     <div className="grid grid-cols-5 gap-2 text-center">
-                                        <div className="p-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs">Hadir<br/>{attendanceStats.h}</div>
-                                        <div className="p-2 rounded-xl bg-blue-50 text-blue-800 font-bold text-xs">Izin<br/>{attendanceStats.iz}</div>
-                                        <div className="p-2 rounded-xl bg-amber-50 text-amber-800 font-bold text-xs">Sakit<br/>{attendanceStats.s}</div>
-                                        <div className="p-2 rounded-xl bg-rose-50 text-rose-800 font-bold text-xs">Alpa<br/>{attendanceStats.a}</div>
-                                        <div className="p-2 rounded-xl bg-purple-50 text-purple-800 font-bold text-xs">Terlambat<br/>{attendanceStats.t}</div>
+                                        <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-100">
+                                            <span className="text-[10px] text-emerald-700 font-bold block">Hadir</span>
+                                            <span className="text-base font-extrabold text-emerald-800">{attendanceStats.h}</span>
+                                        </div>
+                                        <div className="p-2.5 rounded-2xl bg-blue-50 border border-blue-100">
+                                            <span className="text-[10px] text-blue-700 font-bold block">Izin</span>
+                                            <span className="text-base font-extrabold text-blue-800">{attendanceStats.iz}</span>
+                                        </div>
+                                        <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-100">
+                                            <span className="text-[10px] text-amber-700 font-bold block">Sakit</span>
+                                            <span className="text-base font-extrabold text-amber-800">{attendanceStats.s}</span>
+                                        </div>
+                                        <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-100">
+                                            <span className="text-[10px] text-rose-700 font-bold block">Alpa</span>
+                                            <span className="text-base font-extrabold text-rose-800">{attendanceStats.a}</span>
+                                        </div>
+                                        <div className="p-2.5 rounded-2xl bg-purple-50 border border-purple-100">
+                                            <span className="text-[10px] text-purple-700 font-bold block">Terlambat</span>
+                                            <span className="text-base font-extrabold text-purple-800">{attendanceStats.t}</span>
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
+                        {/* PANEL PENILAIAN */}
                         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
                             <div className="flex justify-between items-center border-b pb-3">
                                 <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -472,14 +512,1670 @@
                                     {assessmentStats.completionPct}% Dinilai
                                 </span>
                             </div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between text-xs font-semibold">
-                                    <span>Tingkat Kelulusan KKTP Klasikal</span>
-                                    <span className="font-bold text-emerald-600">{assessmentStats.passRatePct}%</span>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="p-3 border rounded-2xl bg-slate-50 space-y-1">
+                                        <span className="text-xs text-slate-500 font-medium">TP Terpenuhi Penilaian:</span>
+                                        <p className="text-lg font-bold text-slate-800">{assessmentStats.assessedTpCount} dari {allTps.length} TP</p>
+                                    </div>
+                                    <div className="p-3 border rounded-2xl bg-slate-50 space-y-1">
+                                        <span className="text-xs text-slate-500 font-medium">Murid Memiliki Skor:</span>
+                                        <p className="text-lg font-bold text-brand-700">{assessmentStats.studentsWithScoreCount} dari {filteredStudents.length} Murid</p>
+                                    </div>
                                 </div>
-                                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                                    <div className="bg-brand-600 h-full" style={{ width: `${assessmentStats.passRatePct}%` }}></div>
+
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs font-semibold text-slate-600">
+                                        <span>Tingkat Kelulusan KKTP (Klasikal)</span>
+                                        <span className="font-bold text-emerald-600">{assessmentStats.passRatePct}%</span>
+                                    </div>
+                                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="bg-brand-600 h-full" style={{ width: `${assessmentStats.passRatePct}%` }}></div>
+                                    </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BARIS 4: GRAFIK DISTRIBUSI LEVEL SOLO & CAPAIAN TP */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* DISTRIBUSI LEVEL SOLO */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-layer-group text-brand-600"></i> Distribusi Level Taksonomi SOLO
+                            </h3>
+
+                            {assessmentStats.totalEvaluated === 0 ? (
+                                <div className="text-center py-8 space-y-3">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mx-auto">
+                                        <i className="fa-solid fa-chart-column text-lg"></i>
+                                    </div>
+                                    <p className="text-xs text-slate-500">Belum ada data skor SOLO murid yang terekam.</p>
+                                    <button 
+                                        onClick={() => setActiveTab('assessmentInput')} 
+                                        className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all"
+                                    >
+                                        Mulai Input Penilaian SOLO
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {[
+                                        { key: "Prestructural", label: "1. Prestructural", color: "bg-rose-500" },
+                                        { key: "Unistructural", label: "2. Unistructural", color: "bg-amber-500" },
+                                        { key: "Multistructural", label: "3. Multistructural", color: "bg-blue-500" },
+                                        { key: "Relational", label: "4. Relational", color: "bg-indigo-500" },
+                                        { key: "ExtendedAbstract", label: "5. Extended Abstract", color: "bg-emerald-500" }
+                                    ].map(item => {
+                                        const count = assessmentStats.soloDist[item.key] || 0;
+                                        const pct = assessmentStats.totalEvaluated > 0 ? +((count / assessmentStats.totalEvaluated) * 100).toFixed(1) : 0;
+                                        return (
+                                            <div key={item.key} className="space-y-1">
+                                                <div className="flex justify-between text-xs font-semibold text-slate-700">
+                                                    <span>{item.label}</span>
+                                                    <span>{count} murid ({pct}%)</span>
+                                                </div>
+                                                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className={`${item.color} h-full transition-all duration-500`} style={{ width: `${pct}%` }}></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* MATRIKS TP & KKTP CAPAIAN */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-bullseye text-brand-600"></i> Ringkasan Tujuan Pembelajaran & Target KKTP
+                            </h3>
+
+                            {allTps.length === 0 ? (
+                                <div className="text-center py-8 space-y-3">
+                                    <p className="text-xs text-slate-500">Belum ada Tujuan Pembelajaran yang dikonfigurasi.</p>
+                                    <button 
+                                        onClick={() => setActiveTab('curriculum')} 
+                                        className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all"
+                                    >
+                                        Kelola Kurikulum
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                                    {allTps.map(tp => (
+                                        <div key={tp.id} className="p-3 border rounded-2xl bg-slate-50 flex justify-between items-center text-xs">
+                                            <div className="space-y-0.5 max-w-[70%]">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-brand-700">{tp.code}</span>
+                                                    <span className="text-[10px] text-slate-500">({tp.iktps?.length || 0} IKTP)</span>
+                                                </div>
+                                                <p className="text-slate-700 font-medium line-clamp-1">{tp.description}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-purple-200 block">
+                                                    KKTP: {tp.kktpLevel || 'Multistructural'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* BARIS 5: AKTIVITAS TERBARU & PENGINGAT */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* NOTIFIKASI PENGINGAT */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-bell text-amber-500"></i> Pengingat & Notifikasi Sistem
+                            </h3>
+
+                            {reminders.length === 0 ? (
+                                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-semibold flex items-center gap-2">
+                                    <i className="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                                    Semua data kehadiran dan kurikulum terkonfigurasi dengan baik!
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {reminders.map((rem, i) => (
+                                        <div key={i} className={`p-3 rounded-2xl text-xs font-medium border flex items-start gap-2.5 ${
+                                            rem.type === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                                            rem.type === 'alert' ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-blue-50 text-blue-800 border-blue-200'
+                                        }`}>
+                                            <i className={`fa-solid ${rem.type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'} mt-0.5`}></i>
+                                            <span>{rem.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* AKSES CEPAT PINTASAN */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-bolt text-brand-600"></i> Pintasan Akses Cepat
+                            </h3>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={() => setActiveTab('students')} className="p-3 rounded-2xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition-all text-left space-y-1">
+                                    <i className="fa-solid fa-user-plus text-brand-600 text-base"></i>
+                                    <p className="font-bold text-xs text-slate-800">Tambah Murid</p>
+                                    <p className="text-[10px] text-slate-500">Manual atau Excel</p>
+                                </button>
+                                <button onClick={() => setActiveTab('attendance')} className="p-3 rounded-2xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition-all text-left space-y-1">
+                                    <i className="fa-solid fa-calendar-check text-blue-600 text-base"></i>
+                                    <p className="font-bold text-xs text-slate-800">Catat Kehadiran</p>
+                                    <p className="text-[10px] text-slate-500">Per Sesi Pertemuan</p>
+                                </button>
+                                <button onClick={() => setActiveTab('assessmentInput')} className="p-3 rounded-2xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition-all text-left space-y-1">
+                                    <i className="fa-solid fa-pen-to-square text-purple-600 text-base"></i>
+                                    <p className="font-bold text-xs text-slate-800">Input Nilai SOLO</p>
+                                    <p className="text-[10px] text-slate-500">Rubrik 5 Level</p>
+                                </button>
+                                <button onClick={() => setActiveTab('reports')} className="p-3 rounded-2xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/50 transition-all text-left space-y-1">
+                                    <i className="fa-solid fa-file-signature text-emerald-600 text-base"></i>
+                                    <p className="font-bold text-xs text-slate-800">Laporan Resmi</p>
+                                    <p className="text-[10px] text-slate-500">Cetak & Export PDF</p>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- IDENTITY VIEW ---
+        function IdentityView({ teacher, setTeacher, school, setSchool, showToast }) {
+            const handleSave = (e) => {
+                e.preventDefault();
+                showToast("Identitas sekolah dan guru berhasil disimpan!");
+            };
+
+            const handleLogoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setSchool({ ...school, logoUrl: reader.result });
+                        showToast("Logo sekolah berhasil diunggah!");
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            return (
+                <div className="space-y-6 max-w-4xl">
+                    <form onSubmit={handleSave} className="space-y-6">
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-school text-brand-600"></i> Identitas Sekolah & Kop Laporan
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Sekolah</label>
+                                    <input type="text" value={school.name} onChange={e => setSchool({...school, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">NPSN</label>
+                                    <input type="text" value={school.npsn} onChange={e => setSchool({...school, npsn: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Alamat Sekolah</label>
+                                    <input type="text" value={school.address} onChange={e => setSchool({...school, address: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Kepala Sekolah</label>
+                                    <input type="text" value={school.principalName} onChange={e => setSchool({...school, principalName: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">NIP Kepala Sekolah</label>
+                                    <input type="text" value={school.principalNip} onChange={e => setSchool({...school, principalNip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="pt-2 border-t">
+                                <label className="block text-xs font-semibold text-slate-600 mb-2">Logo Sekolah (Kop Laporan)</label>
+                                <div className="flex items-center gap-4">
+                                    {school.logoUrl && <img src={school.logoUrl} className="w-14 h-14 object-contain border rounded-xl p-1 bg-slate-50" />}
+                                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                                <i className="fa-solid fa-chalkboard-user text-brand-600"></i> Identitas Guru Mata Pelajaran
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
+                                    <input type="text" value={teacher.name} onChange={e => setTeacher({...teacher, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">NIP</label>
+                                    <input type="text" value={teacher.nip} onChange={e => setTeacher({...teacher, nip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
+                                    <input type="text" value={teacher.subject} onChange={e => setTeacher({...teacher, subject: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                            <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all">
+                                <i className="fa-solid fa-floppy-disk mr-2"></i> Simpan Identitas
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            );
+        }
+
+        // --- CLASSES VIEW ---
+        function ClassesView({ classes, setClasses, showToast }) {
+            const [className, setClassName] = useState("");
+            const [grade, setGrade] = useState("VII");
+
+            const handleAddClass = (e) => {
+                e.preventDefault();
+                if (!className) return;
+                const newC = { id: 'c_' + Date.now(), name: className, grade, academicYear: "2024/2025", semester: "Ganjil" };
+                setClasses([...classes, newC]);
+                setClassName("");
+                showToast("Kelas berhasil ditambahkan!");
+            };
+
+            return (
+                <div className="space-y-6 max-w-4xl">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">Tambah Kelas Baru</h3>
+                        <form onSubmit={handleAddClass} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="text" placeholder="Nama Kelas (Misal: VII C)" value={className} onChange={e => setClassName(e.target.value)} className="px-3 py-2 border rounded-xl text-xs outline-none" required />
+                            <select value={grade} onChange={e => setGrade(e.target.value)} className="px-3 py-2 border rounded-xl text-xs outline-none">
+                                <option value="VII">Tingkat VII</option>
+                                <option value="VIII">Tingkat VIII</option>
+                                <option value="IX">Tingkat IX</option>
+                            </select>
+                            <button type="submit" className="bg-brand-600 text-white font-bold text-xs py-2 rounded-xl shadow-md">+ Tambah Kelas</button>
+                        </form>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">Daftar Kelas</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {classes.map(c => (
+                                <div key={c.id} className="p-4 border rounded-xl bg-slate-50 flex justify-between items-center">
+                                    <div>
+                                        <h4 className="font-bold text-slate-800 text-sm">{c.name}</h4>
+                                        <p className="text-xs text-slate-500">Tingkat {c.grade}</p>
+                                    </div>
+                                    <button onClick={() => { setClasses(classes.filter(x => x.id !== c.id)); showToast("Kelas dihapus.", "error"); }} className="text-rose-600 p-2"><i className="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- STUDENTS VIEW ---
+        function StudentsView({ students, setStudents, classes, showToast }) {
+            const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
+            const [name, setName] = useState("");
+            const [nis, setNis] = useState("");
+            const [nisn, setNisn] = useState("");
+            const [gender, setGender] = useState("L");
+
+            // Import Excel States
+            const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+            const [importFile, setImportFile] = useState(null);
+            const [importTargetClassId, setImportTargetClassId] = useState(classes[0]?.id || "");
+            const [parsedRows, setParsedRows] = useState([]);
+            const [validationResult, setValidationResult] = useState({ valid: [], invalid: [] });
+
+            const handleAdd = (e) => {
+                e.preventDefault();
+                if (!name || !nis) return alert("Nama dan NIS wajib diisi!");
+                const isDuplicate = students.some(s => s.classId === selectedClassId && s.nis === nis);
+                if (isDuplicate) return alert(`NIS ${nis} sudah terdaftar di kelas ini!`);
+
+                setStudents([...students, { id: 's_' + Date.now(), classId: selectedClassId, name, nis, nisn, gender }]);
+                setName(""); setNis(""); setNisn("");
+                showToast("Murid berhasil ditambahkan!");
+            };
+
+            const downloadTemplate = () => {
+                const templateData = [
+                    ["No", "Nama Lengkap", "NIS", "NISN", "Jenis Kelamin", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Alamat"],
+                    [1, "Andi Ahmad Rivaldi", "24001", "0081234561", "L", classes[0]?.name || "VII A", "Sungguminasa", "2011-05-12", "Jl. Tumanurung No. 5"],
+                    [2, "Nur Aisyah Humaira", "24002", "0081234562", "P", classes[0]?.name || "VII A", "Gowa", "2011-08-20", "Jl. Poros Malino Km. 4"]
+                ];
+                const ws = XLSX.utils.aoa_to_sheet(templateData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Template_Murid");
+                XLSX.writeFile(wb, "Template_Import_Murid_SIPAKATAU.xlsx");
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setImportFile(file);
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const bstr = evt.target.result;
+                        const wb = XLSX.read(bstr, { type: 'binary' });
+                        const wsname = wb.SheetNames[0];
+                        const ws = wb.Sheets[wsname];
+                        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+                        if (data.length <= 1) {
+                            alert("File Excel kosong atau tidak memiliki baris data!");
+                            return;
+                        }
+
+                        // Parse headers and rows
+                        const rows = data.slice(1);
+                        const validList = [];
+                        const invalidList = [];
+
+                        // Existing NIS list for collision detection
+                        const existingNisSet = new Set(students.filter(s => s.classId === (importTargetClassId || selectedClassId)).map(s => String(s.nis).trim()));
+                        const batchNisSet = new Set();
+
+                        rows.forEach((row, idx) => {
+                            const rowNo = idx + 2; // header is row 1
+                            if (!row || row.length === 0 || row.every(cell => cell === null || cell === undefined || String(cell).trim() === "")) {
+                                return; // Abaikan baris kosong
+                            }
+
+                            const rowName = row[1] ? String(row[1]).trim() : "";
+                            const rowNis = row[2] ? String(row[2]).trim() : "";
+                            const rowNisn = row[3] ? String(row[3]).trim() : "";
+                            const rowGender = row[4] ? String(row[4]).trim().toUpperCase() : "L";
+                            const rowClassName = row[5] ? String(row[5]).trim() : "";
+                            const rowBirthPlace = row[6] ? String(row[6]).trim() : "";
+                            const rowBirthDate = row[7] ? String(row[7]).trim() : "";
+                            const rowAddress = row[8] ? String(row[8]).trim() : "";
+
+                            const errors = [];
+                            if (!rowName) errors.push("Nama Lengkap wajib diisi");
+                            if (!rowNis) errors.push("NIS wajib diisi");
+
+                            // Match Class
+                            let matchedClass = classes.find(c => c.name.toLowerCase() === rowClassName.toLowerCase());
+                            if (!matchedClass && importTargetClassId) {
+                                matchedClass = classes.find(c => c.id === importTargetClassId);
+                            }
+
+                            if (!matchedClass) {
+                                errors.push(`Kelas "${rowClassName}" tidak ditemukan dalam sistem`);
+                            }
+
+                            const currentClassId = matchedClass ? matchedClass.id : importTargetClassId;
+
+                            // Duplicate NIS Check
+                            if (rowNis) {
+                                if (existingNisSet.has(rowNis)) {
+                                    errors.push(`NIS ${rowNis} sudah terdaftar di database kelas ini`);
+                                } else if (batchNisSet.has(rowNis)) {
+                                    errors.push(`NIS ${rowNis} duplikat dalam file Excel`);
+                                } else {
+                                    batchNisSet.add(rowNis);
+                                }
+                            }
+
+                            if (errors.length > 0) {
+                                invalidList.push({ rowNo, name: rowName || '-', nis: rowNis || '-', errors });
+                            } else {
+                                validList.push({
+                                    id: 's_' + Date.now() + '_' + idx,
+                                    classId: currentClassId,
+                                    name: rowName,
+                                    nis: rowNis,
+                                    nisn: rowNisn,
+                                    gender: (rowGender === 'P' || rowGender === 'PEREMPUAN') ? 'P' : 'L',
+                                    birthPlace: rowBirthPlace,
+                                    birthDate: rowBirthDate,
+                                    address: rowAddress
+                                });
+                            }
+                        });
+
+                        setParsedRows(data);
+                        setValidationResult({ valid: validList, invalid: invalidList });
+                    } catch (err) {
+                        alert("Gagal membaca file Excel. Pastikan format file sesuai.");
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            const handleCommitImport = () => {
+                if (validationResult.valid.length === 0) {
+                    alert("Tidak ada data valid yang dapat diimpor.");
+                    return;
+                }
+
+                setStudents(prev => [...prev, ...validationResult.valid]);
+                showToast(`Impor berhasil! ${validationResult.valid.length} murid ditambahkan, ${validationResult.invalid.length} gagal.`);
+                setIsImportModalOpen(false);
+                setImportFile(null);
+                setValidationResult({ valid: [], invalid: [] });
+            };
+
+            const filtered = students.filter(s => s.classId === selectedClassId);
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <label className="text-xs font-bold text-slate-600">Pilih Kelas:</label>
+                            <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="px-3 py-2 border rounded-xl text-sm font-semibold outline-none">
+                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={downloadTemplate} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
+                                <i className="fa-solid fa-download text-brand-600"></i> Download Template Excel
+                            </button>
+                            <button onClick={() => { setIsImportModalOpen(true); setImportTargetClassId(selectedClassId); }} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5">
+                                <i className="fa-solid fa-file-excel"></i> Import Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Murid Manual</h3>
+                            <form onSubmit={handleAdd} className="space-y-3">
+                                <input type="text" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                <input type="text" placeholder="NIS" value={nis} onChange={e => setNis(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                <input type="text" placeholder="NISN (Opsional)" value={nisn} onChange={e => setNisn(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                <select value={gender} onChange={e => setGender(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
+                                    <option value="L">Laki-laki</option>
+                                    <option value="P">Perempuan</option>
+                                </select>
+                                <button type="submit" className="w-full bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-md">Simpan Murid</button>
+                            </form>
+                        </div>
+
+                        <div className="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3">Daftar Murid ({filtered.length})</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-slate-100 text-slate-700 font-bold">
+                                        <tr>
+                                            <th className="p-3">No</th>
+                                            <th className="p-3">Nama Lengkap</th>
+                                            <th className="p-3">NIS</th>
+                                            <th className="p-3">L/P</th>
+                                            <th className="p-3 text-right">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filtered.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="p-4 text-center text-slate-400 italic">Belum ada murid di kelas ini.</td>
+                                            </tr>
+                                        ) : (
+                                            filtered.map((st, i) => (
+                                                <tr key={st.id} className="hover:bg-slate-50">
+                                                    <td className="p-3 font-semibold">{i + 1}</td>
+                                                    <td className="p-3 font-bold text-slate-800">{st.name}</td>
+                                                    <td className="p-3 font-mono">{st.nis}</td>
+                                                    <td className="p-3">{st.gender}</td>
+                                                    <td className="p-3 text-right">
+                                                        <button onClick={() => { setStudents(students.filter(x => x.id !== st.id)); showToast("Murid dihapus.", "error"); }} className="text-rose-600"><i className="fa-solid fa-trash"></i></button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MODAL IMPORT EXCEL */}
+                    {isImportModalOpen && (
+                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                            <div className="bg-white p-6 rounded-2xl max-w-2xl w-full space-y-4 my-8">
+                                <div className="flex justify-between items-center border-b pb-3">
+                                    <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                                        <i className="fa-solid fa-file-excel text-emerald-600"></i> Import Data Murid dari Excel
+                                    </h3>
+                                    <button onClick={() => setIsImportModalOpen(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-base"></i></button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">Kelas Tujuan Default (jika kolom kelas di file kosong/tidak sesuai):</label>
+                                        <select value={importTargetClassId} onChange={e => setImportTargetClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
+                                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">Upload File Excel (.xlsx / .xls):</label>
+                                        <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700" />
+                                    </div>
+
+                                    {/* RESULTS PREVIEW */}
+                                    {validationResult.valid.length > 0 || validationResult.invalid.length > 0 ? (
+                                        <div className="space-y-3 pt-2">
+                                            <div className="flex gap-4 text-xs">
+                                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-3 py-1 rounded-lg">
+                                                    ✓ Data Valid: {validationResult.valid.length}
+                                                </span>
+                                                <span className="bg-rose-50 text-rose-700 border border-rose-200 font-bold px-3 py-1 rounded-lg">
+                                                    ✕ Gagal / Invalid: {validationResult.invalid.length}
+                                                </span>
+                                            </div>
+
+                                            {/* INVALID DETAILS */}
+                                            {validationResult.invalid.length > 0 && (
+                                                <div className="bg-rose-50/70 border border-rose-200 rounded-xl p-3 max-h-36 overflow-y-auto text-xs space-y-1.5">
+                                                    <p className="font-bold text-rose-800">Detail Kesalahan Validasi:</p>
+                                                    {validationResult.invalid.map((inv, i) => (
+                                                        <div key={i} className="text-rose-700">
+                                                            <strong>Baris {inv.rowNo} ({inv.name} - NIS: {inv.nis}):</strong> {inv.errors.join(", ")}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* VALID PREVIEW TABLE */}
+                                            {validationResult.valid.length > 0 && (
+                                                <div className="space-y-1">
+                                                    <p className="text-xs font-bold text-slate-700">Pratinjau Data Siap Diimpor ({validationResult.valid.length} murid):</p>
+                                                    <div className="max-h-48 overflow-y-auto border rounded-xl">
+                                                        <table className="w-full text-left text-[11px]">
+                                                            <thead className="bg-slate-100 font-bold text-slate-700 sticky top-0">
+                                                                <tr>
+                                                                    <th className="p-2 border-b">Nama</th>
+                                                                    <th className="p-2 border-b">NIS</th>
+                                                                    <th className="p-2 border-b">NISN</th>
+                                                                    <th className="p-2 border-b">L/P</th>
+                                                                    <th className="p-2 border-b">Kelas Target</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-100">
+                                                                {validationResult.valid.map((v, i) => {
+                                                                    const cls = classes.find(c => c.id === v.classId);
+                                                                    return (
+                                                                        <tr key={i}>
+                                                                            <td className="p-2 font-bold">{v.name}</td>
+                                                                            <td className="p-2 font-mono">{v.nis}</td>
+                                                                            <td className="p-2 font-mono">{v.nisn || '-'}</td>
+                                                                            <td className="p-2">{v.gender}</td>
+                                                                            <td className="p-2 font-semibold text-brand-700">{cls ? cls.name : '-'}</td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-3 border-t">
+                                    <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Batal</button>
+                                    <button 
+                                        onClick={handleCommitImport} 
+                                        disabled={validationResult.valid.length === 0}
+                                        className={`px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md ${validationResult.valid.length > 0 ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed'}`}
+                                    >
+                                        Simpan {validationResult.valid.length} Data Valid
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- ATTENDANCE VIEW ---
+        function AttendanceView({ classes, students, attendanceSessions, setAttendanceSessions, showToast }) {
+            const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
+            const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
+            const [sessionNo, setSessionNo] = useState(1);
+            const [material, setMaterial] = useState("");
+            const [records, setRecords] = useState({});
+
+            const currentStudents = students.filter(s => s.classId === selectedClassId);
+
+            const handleStatusChange = (studentId, status) => {
+                setRecords(prev => ({ ...prev, [studentId]: status }));
+            };
+
+            const markAllHadir = () => {
+                const updated = {};
+                currentStudents.forEach(s => { updated[s.id] = "Hadir"; });
+                setRecords(updated);
+            };
+
+            const handleSaveAttendance = (e) => {
+                e.preventDefault();
+                const newSession = {
+                    id: 'att_' + Date.now(),
+                    classId: selectedClassId,
+                    date: sessionDate,
+                    sessionNo: Number(sessionNo),
+                    material,
+                    records
+                };
+                setAttendanceSessions(prev => [newSession, ...prev]);
+                showToast("Data kehadiran berhasil disimpan!");
+                setRecords({});
+                setMaterial("");
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center justify-between">
+                            <span>Input Kehadiran Per Pertemuan</span>
+                            <button onClick={markAllHadir} type="button" className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all">
+                                ✓ Tandai Semua Hadir
+                            </button>
+                        </h3>
+
+                        <form onSubmit={handleSaveAttendance} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Kelas</label>
+                                    <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
+                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pertemuan</label>
+                                    <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Pertemuan Ke-</label>
+                                    <input type="number" min="1" value={sessionNo} onChange={e => setSessionNo(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                </div>
+                                <div className="md:col-span-3">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Materi Pembelajaran (Opsional)</label>
+                                    <input type="text" placeholder="Misal: Struktur Sel dan Organel" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="border rounded-xl overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-slate-100 font-bold text-slate-700">
+                                        <tr>
+                                            <th className="p-3">No</th>
+                                            <th className="p-3">Nama Murid</th>
+                                            <th className="p-3">NIS</th>
+                                            <th className="p-3 text-center">Status Kehadiran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {currentStudents.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="4" className="p-4 text-center text-slate-400 italic">Belum ada murid di kelas ini.</td>
+                                            </tr>
+                                        ) : (
+                                            currentStudents.map((st, i) => {
+                                                const currentStatus = records[st.id] || "Hadir";
+                                                return (
+                                                    <tr key={st.id} className="hover:bg-slate-50">
+                                                        <td className="p-3 font-semibold">{i + 1}</td>
+                                                        <td className="p-3 font-bold text-slate-800">{st.name}</td>
+                                                        <td className="p-3 font-mono text-slate-500">{st.nis}</td>
+                                                        <td className="p-3">
+                                                            <div className="flex justify-center gap-1.5">
+                                                                {["Hadir", "Izin", "Sakit", "Alpa", "Terlambat"].map(stt => (
+                                                                    <button
+                                                                        type="button"
+                                                                        key={stt}
+                                                                        onClick={() => handleStatusChange(st.id, stt)}
+                                                                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                                                                            currentStatus === stt
+                                                                                ? stt === "Hadir" ? "bg-emerald-600 text-white"
+                                                                                : stt === "Izin" ? "bg-blue-600 text-white"
+                                                                                : stt === "Sakit" ? "bg-amber-600 text-white"
+                                                                                : stt === "Alpa" ? "bg-rose-600 text-white"
+                                                                                : "bg-purple-600 text-white"
+                                                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                                        }`}
+                                                                    >
+                                                                        {stt}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="flex justify-end">
+                                <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md">
+                                    Simpan Pertemuan Kehadiran
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- CURRICULUM VIEW (COMPLETE INTERACTIVE CRUD & SOLO RUBRIC) ---
+        function CurriculumView({ curriculum, setCurriculum, showToast }) {
+            const [expandedCp, setExpandedCp] = useState({});
+            const [expandedMat, setExpandedMat] = useState({});
+            const [expandedTp, setExpandedTp] = useState({});
+
+            // Modals & Active Edit State
+            const [activeModal, setActiveModal] = useState(null); // 'cp', 'material', 'tp', 'iktp', 'kktp'
+            const [modalData, setModalData] = useState({});
+
+            const toggleCp = id => setExpandedCp(prev => ({ ...prev, [id]: !prev[id] }));
+            const toggleMat = id => setExpandedMat(prev => ({ ...prev, [id]: !prev[id] }));
+            const toggleTp = id => setExpandedTp(prev => ({ ...prev, [id]: !prev[id] }));
+
+            // CRUD HANDLERS FOR CP
+            const handleSaveCp = (e) => {
+                e.preventDefault();
+                if (modalData.id) {
+                    setCurriculum(prev => prev.map(c => c.id === modalData.id ? { ...c, ...modalData } : c));
+                    showToast("Capaian Pembelajaran berhasil diperbarui!");
+                } else {
+                    const newCp = {
+                        id: 'cp_' + Date.now(),
+                        subject: modalData.subject || "Ilmu Pengetahuan Alam (IPA)",
+                        phase: modalData.phase || "D",
+                        element: modalData.element || "Pemahaman IPA",
+                        description: modalData.description || "",
+                        materials: []
+                    };
+                    setCurriculum(prev => [...prev, newCp]);
+                    showToast("Capaian Pembelajaran baru ditambahkan!");
+                }
+                setActiveModal(null);
+            };
+
+            const handleDeleteCp = (cpId) => {
+                if (confirm("Apakah Anda yakin ingin menghapus CP ini beserta seluruh Materi, TP, IKTP, dan Rubrik di bawahnya?")) {
+                    setCurriculum(prev => prev.filter(c => c.id !== cpId));
+                    showToast("CP berhasil dihapus.", "error");
+                }
+            };
+
+            // CRUD HANDLERS FOR MATERIAL
+            const handleSaveMaterial = (e) => {
+                e.preventDefault();
+                const { cpId, id, title } = modalData;
+                setCurriculum(prev => prev.map(cp => {
+                    if (cp.id !== cpId) return cp;
+                    let updatedMats = [...cp.materials];
+                    if (id) {
+                        updatedMats = updatedMats.map(m => m.id === id ? { ...m, title } : m);
+                    } else {
+                        updatedMats.push({ id: 'm_' + Date.now(), title, tps: [] });
+                    }
+                    return { ...cp, materials: updatedMats };
+                }));
+                showToast("Materi pembelajaran berhasil disimpan!");
+                setActiveModal(null);
+            };
+
+            const handleDeleteMaterial = (cpId, matId) => {
+                if (confirm("Hapus materi ini beserta TP dan IKTP di dalamnya?")) {
+                    setCurriculum(prev => prev.map(cp => {
+                        if (cp.id !== cpId) return cp;
+                        return { ...cp, materials: cp.materials.filter(m => m.id !== matId) };
+                    }));
+                    showToast("Materi berhasil dihapus.", "error");
+                }
+            };
+
+            // CRUD HANDLERS FOR TP
+            const handleSaveTp = (e) => {
+                e.preventDefault();
+                const { cpId, matId, id, code, description } = modalData;
+                setCurriculum(prev => prev.map(cp => {
+                    if (cp.id !== cpId) return cp;
+                    const updatedMats = cp.materials.map(m => {
+                        if (m.id !== matId) return m;
+                        let updatedTps = [...m.tps];
+                        if (id) {
+                            updatedTps = updatedTps.map(t => t.id === id ? { ...t, code, description } : t);
+                        } else {
+                            updatedTps.push({
+                                id: 'tp_' + Date.now(),
+                                code: code || `TP ${updatedTps.length + 1}`,
+                                description,
+                                kktpLevel: "Multistructural",
+                                ranges: {
+                                    Prestructural: { min: 0, max: 59 },
+                                    Unistructural: { min: 60, max: 74 },
+                                    Multistructural: { min: 75, max: 83 },
+                                    Relational: { min: 84, max: 92 },
+                                    ExtendedAbstract: { min: 93, max: 100 }
+                                },
+                                iktps: []
+                            });
+                        }
+                        return { ...m, tps: updatedTps };
+                    });
+                    return { ...cp, materials: updatedMats };
+                }));
+                showToast("Tujuan Pembelajaran berhasil disimpan!");
+                setActiveModal(null);
+            };
+
+            const handleDeleteTp = (cpId, matId, tpId) => {
+                if (confirm("Hapus TP ini beserta seluruh IKTP dan rubrik di dalamnya?")) {
+                    setCurriculum(prev => prev.map(cp => {
+                        if (cp.id !== cpId) return cp;
+                        const updatedMats = cp.materials.map(m => {
+                            if (m.id !== matId) return m;
+                            return { ...m, tps: m.tps.filter(t => t.id !== tpId) };
+                        });
+                        return { ...cp, materials: updatedMats };
+                    }));
+                    showToast("TP berhasil dihapus.", "error");
+                }
+            };
+
+            // CRUD & AI FOR IKTP & RUBRIC
+            const handleSaveIktp = (e) => {
+                e.preventDefault();
+                const { cpId, matId, tpId, id, description, rubric } = modalData;
+                setCurriculum(prev => prev.map(cp => {
+                    if (cp.id !== cpId) return cp;
+                    const updatedMats = cp.materials.map(m => {
+                        if (m.id !== matId) return m;
+                        const updatedTps = m.tps.map(t => {
+                            if (t.id !== tpId) return t;
+                            let updatedIktps = [...t.iktps];
+                            if (id) {
+                                updatedIktps = updatedIktps.map(ik => ik.id === id ? { ...ik, description, rubric } : ik);
+                            } else {
+                                updatedIktps.push({
+                                    id: 'ik_' + Date.now(),
+                                    description,
+                                    rubric: rubric || {
+                                        Prestructural: "Murid belum menunjukkan pemahaman yang relevan.",
+                                        Unistructural: "Murid memahami satu aspek dasar.",
+                                        Multistructural: "Murid memahami beberapa aspek terpisah.",
+                                        Relational: "Murid mampu menghubungkan antar aspek secara rasional.",
+                                        ExtendedAbstract: "Murid mampu melakukan abstraksi dan mengaplikasikan pada konteks baru."
+                                    }
+                                });
+                            }
+                            return { ...t, iktps: updatedIktps };
+                        });
+                        return { ...m, tps: updatedTps };
+                    });
+                    return { ...cp, materials: updatedMats };
+                }));
+                showToast("IKTP & Rubrik SOLO berhasil disimpan!");
+                setActiveModal(null);
+            };
+
+            const handleDeleteIktp = (cpId, matId, tpId, iktpId) => {
+                if (confirm("Hapus IKTP ini?")) {
+                    setCurriculum(prev => prev.map(cp => {
+                        if (cp.id !== cpId) return cp;
+                        const updatedMats = cp.materials.map(m => {
+                            if (m.id !== matId) return m;
+                            const updatedTps = m.tps.map(t => {
+                                if (t.id !== tpId) return t;
+                                return { ...t, iktps: t.iktps.filter(ik => ik.id !== iktpId) };
+                            });
+                            return { ...m, tps: updatedTps };
+                        });
+                        return { ...cp, materials: updatedMats };
+                    }));
+                    showToast("IKTP dihapus.", "error");
+                }
+            };
+
+            const handleGenerateIktpAi = (cpId, matId, tp) => {
+                const generatedDescription = `Murid mampu menganalisis implikasi lanjutan dari ${tp.description.toLowerCase().replace('murid mampu ', '')}.`;
+                const generatedRubric = {
+                    Prestructural: `Murid belum mampu menunjukkan pemahaman mengenai ${tp.code}.`,
+                    Unistructural: `Murid dapat mengidentifikasi satu komponen dasar pada ${tp.code}.`,
+                    Multistructural: `Murid dapat mendaftarkan beberapa komponen utama pada ${tp.code} tanpa korelasi utuh.`,
+                    Relational: `Murid dapat menghubungkan antar komponen pada ${tp.code} secara terintegrasi.`,
+                    ExtendedAbstract: `Murid dapat mengevaluasi dan menggeneralisasi konsep ${tp.code} pada studi kasus baru.`
+                };
+
+                setModalData({
+                    cpId, matId, tpId: tp.id,
+                    description: generatedDescription,
+                    rubric: generatedRubric
+                });
+                setActiveModal('iktp');
+                showToast("IKTP & Rubrik SOLO berhasil dihasilkan via AI Gemini (Draft)!");
+            };
+
+            // KKTP SETTINGS HANDLER
+            const handleSaveKktp = (e) => {
+                e.preventDefault();
+                const { cpId, matId, tpId, kktpLevel, ranges } = modalData;
+                setCurriculum(prev => prev.map(cp => {
+                    if (cp.id !== cpId) return cp;
+                    const updatedMats = cp.materials.map(m => {
+                        if (m.id !== matId) return m;
+                        const updatedTps = m.tps.map(t => {
+                            if (t.id !== tpId) return t;
+                            return { ...t, kktpLevel, ranges };
+                        });
+                        return { ...m, tps: updatedTps };
+                    });
+                    return { ...cp, materials: updatedMats };
+                }));
+                showToast("Pengaturan KKTP & Rentang Nilai TP berhasil diperbarui!");
+                setActiveModal(null);
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+                        <div>
+                            <h3 className="text-base font-bold text-slate-800">Struktur Kurikulum Bertingkat & Rubrik SOLO</h3>
+                            <p className="text-xs text-slate-500">Kelola CP, Materi, TP, IKTP, Rubrik SOLO, dan KKTP secara mandiri.</p>
+                        </div>
+                        <button 
+                            onClick={() => { setModalData({}); setActiveModal('cp'); }} 
+                            className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5"
+                        >
+                            <i className="fa-solid fa-plus"></i> Tambah CP Baru
+                        </button>
+                    </div>
+
+                    {/* ACCORDION TREE VIEW */}
+                    <div className="space-y-4">
+                        {curriculum.map(cp => (
+                            <div key={cp.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                                {/* CP HEADER */}
+                                <div className="p-4 bg-slate-900 text-white flex justify-between items-center cursor-pointer select-none" onClick={() => toggleCp(cp.id)}>
+                                    <div className="flex items-center gap-3">
+                                        <i className={`fa-solid ${expandedCp[cp.id] ? 'fa-chevron-down' : 'fa-chevron-right'} text-brand-300 text-xs`}></i>
+                                        <div>
+                                            <span className="bg-brand-500/30 text-brand-200 text-[10px] font-bold px-2 py-0.5 rounded-md border border-brand-400/30 mr-2">Fase {cp.phase}</span>
+                                            <span className="font-bold text-sm">{cp.subject}</span>
+                                            <p className="text-xs text-slate-300 font-normal mt-0.5">{cp.description}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => { setModalData({ cpId: cp.id }); setActiveModal('material'); }} className="bg-brand-600 hover:bg-brand-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                                            + Materi
+                                        </button>
+                                        <button onClick={() => { setModalData(cp); setActiveModal('cp'); }} className="text-slate-300 hover:text-white p-1.5"><i className="fa-solid fa-pen text-xs"></i></button>
+                                        <button onClick={() => handleDeleteCp(cp.id)} className="text-rose-400 hover:text-rose-300 p-1.5"><i className="fa-solid fa-trash text-xs"></i></button>
+                                    </div>
+                                </div>
+
+                                {/* MATERIALS */}
+                                {expandedCp[cp.id] && (
+                                    <div className="p-4 bg-slate-50 space-y-4">
+                                        {cp.materials.length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">Belum ada materi di CP ini.</p>
+                                        ) : (
+                                            cp.materials.map(mat => (
+                                                <div key={mat.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                                                    {/* MAT HEADER */}
+                                                    <div className="p-3 bg-slate-100 flex justify-between items-center cursor-pointer select-none" onClick={() => toggleMat(mat.id)}>
+                                                        <div className="flex items-center gap-2">
+                                                            <i className={`fa-solid ${expandedMat[mat.id] ? 'fa-chevron-down' : 'fa-chevron-right'} text-slate-400 text-xs`}></i>
+                                                            <span className="font-bold text-xs text-slate-800">Materi: {mat.title}</span>
+                                                            <span className="text-[10px] text-slate-500">({mat.tps.length} TP)</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                                                            <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id }); setActiveModal('tp'); }} className="bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
+                                                                + TP
+                                                            </button>
+                                                            <button onClick={() => { setModalData({ cpId: cp.id, id: mat.id, title: mat.title }); setActiveModal('material'); }} className="text-slate-500 p-1"><i className="fa-solid fa-pen text-xs"></i></button>
+                                                            <button onClick={() => handleDeleteMaterial(cp.id, mat.id)} className="text-rose-600 p-1"><i className="fa-solid fa-trash text-xs"></i></button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* TPS */}
+                                                    {expandedMat[mat.id] && (
+                                                        <div className="p-3 space-y-3">
+                                                            {mat.tps.length === 0 ? (
+                                                                <p className="text-xs text-slate-400 italic">Belum ada TP di materi ini.</p>
+                                                            ) : (
+                                                                mat.tps.map(tp => (
+                                                                    <div key={tp.id} className="border border-brand-100 rounded-xl p-3 bg-brand-50/30 space-y-3">
+                                                                        {/* TP HEADER */}
+                                                                        <div className="flex justify-between items-start gap-2">
+                                                                            <div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="font-bold text-xs text-brand-700">{tp.code}</span>
+                                                                                    <span className="bg-purple-100 text-purple-700 font-bold text-[10px] px-2 py-0.5 rounded-full border border-purple-200">
+                                                                                        KKTP: {tp.kktpLevel || "Multistructural"}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <p className="text-xs text-slate-700 font-medium mt-1">{tp.description}</p>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <button onClick={() => handleGenerateIktpAi(cp.id, mat.id, tp)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] px-2 py-1 rounded-md flex items-center gap-1 shadow-xs">
+                                                                                    <i className="fa-solid fa-wand-magic-sparkles"></i> AI IKTP
+                                                                                </button>
+                                                                                <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, tpId: tp.id }); setActiveModal('iktp'); }} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[10px] px-2 py-1 rounded-md">
+                                                                                    + IKTP Manual
+                                                                                </button>
+                                                                                <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, tpId: tp.id, kktpLevel: tp.kktpLevel, ranges: tp.ranges }); setActiveModal('kktp'); }} className="bg-amber-100 text-amber-800 font-bold text-[10px] px-2 py-1 rounded-md border border-amber-200">
+                                                                                    Set KKTP
+                                                                                </button>
+                                                                                <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, ...tp }); setActiveModal('tp'); }} className="text-slate-500 p-1"><i className="fa-solid fa-pen text-xs"></i></button>
+                                                                                <button onClick={() => handleDeleteTp(cp.id, mat.id, tp.id)} className="text-rose-600 p-1"><i className="fa-solid fa-trash text-xs"></i></button>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* IKTPS & SOLO RUBRICS */}
+                                                                        <div className="space-y-2 pt-2 border-t border-brand-100">
+                                                                            {tp.iktps.map((ik, ikIdx) => (
+                                                                                <div key={ik.id} className="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <span className="font-bold text-slate-800">IKTP {ikIdx + 1}: {ik.description}</span>
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <button onClick={() => { setModalData({ cpId: cp.id, matId: mat.id, tpId: tp.id, ...ik }); setActiveModal('iktp'); }} className="text-brand-600 font-bold text-[10px] hover:underline">Edit Rubrik SOLO</button>
+                                                                                            <button onClick={() => handleDeleteIktp(cp.id, mat.id, tp.id, ik.id)} className="text-rose-600 p-1 ml-2"><i className="fa-solid fa-trash text-[11px]"></i></button>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* 5 LEVEL SOLO RUBRIC DISPLAY */}
+                                                                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-1.5 text-[10px]">
+                                                                                        <div className="p-2 bg-rose-50 border border-rose-200 rounded-md">
+                                                                                            <span className="font-bold text-rose-800 block mb-0.5">1. Prestructural</span>
+                                                                                            <p className="text-slate-600">{ik.rubric?.Prestructural || '-'}</p>
+                                                                                        </div>
+                                                                                        <div className="p-2 bg-amber-50 border border-amber-200 rounded-md">
+                                                                                            <span className="font-bold text-amber-800 block mb-0.5">2. Unistructural</span>
+                                                                                            <p className="text-slate-600">{ik.rubric?.Unistructural || '-'}</p>
+                                                                                        </div>
+                                                                                        <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                                                                            <span className="font-bold text-blue-800 block mb-0.5">3. Multistructural</span>
+                                                                                            <p className="text-slate-600">{ik.rubric?.Multistructural || '-'}</p>
+                                                                                        </div>
+                                                                                        <div className="p-2 bg-indigo-50 border border-indigo-200 rounded-md">
+                                                                                            <span className="font-bold text-indigo-800 block mb-0.5">4. Relational</span>
+                                                                                            <p className="text-slate-600">{ik.rubric?.Relational || '-'}</p>
+                                                                                        </div>
+                                                                                        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-md">
+                                                                                            <span className="font-bold text-emerald-800 block mb-0.5">5. Extended Abstract</span>
+                                                                                            <p className="text-slate-600">{ik.rubric?.ExtendedAbstract || '-'}</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* MODAL EDIT IKTP & RUBRIK SOLO */}
+                    {activeModal === 'iktp' && (
+                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                            <div className="bg-white p-6 rounded-2xl max-w-3xl w-full space-y-4 my-8">
+                                <h3 className="text-base font-bold text-slate-800 border-b pb-3">Edit IKTP & Deskriptor Rubrik SOLO (5 Level)</h3>
+                                <form onSubmit={handleSaveIktp} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">Rumusan Indikator (IKTP)</label>
+                                        <input type="text" value={modalData.description || ''} onChange={e => setModalData({...modalData, description: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <p className="text-xs font-bold text-slate-700">Deskripsi Rubrik SOLO 5 Level:</p>
+
+                                        {["Prestructural", "Unistructural", "Multistructural", "Relational", "ExtendedAbstract"].map((lvl, idx) => (
+                                            <div key={lvl} className="p-3 border rounded-xl bg-slate-50 space-y-1">
+                                                <label className="block text-xs font-bold text-slate-800">{idx + 1}. Level {lvl}</label>
+                                                <textarea 
+                                                    rows="2" 
+                                                    value={modalData.rubric?.[lvl] || ''} 
+                                                    onChange={e => setModalData({
+                                                        ...modalData, 
+                                                        rubric: { ...modalData.rubric, [lvl]: e.target.value }
+                                                    })} 
+                                                    className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none"
+                                                    required
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-3 border-t">
+                                        <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Batal</button>
+                                        <button type="submit" className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md">Simpan IKTP & Rubrik</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL KKTP SETTINGS */}
+                    {activeModal === 'kktp' && (
+                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white p-6 rounded-2xl max-w-xl w-full space-y-4">
+                                <h3 className="text-base font-bold text-slate-800 border-b pb-3">Pengaturan KKTP & Rentang Konversi TP</h3>
+                                <form onSubmit={handleSaveKktp} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1">Target Minimum Level KKTP:</label>
+                                        <select 
+                                            value={modalData.kktpLevel || 'Multistructural'} 
+                                            onChange={e => setModalData({...modalData, kktpLevel: e.target.value})} 
+                                            className="w-full px-3 py-2 border rounded-xl text-xs outline-none font-bold text-purple-700"
+                                        >
+                                            <option value="Prestructural">Prestructural</option>
+                                            <option value="Unistructural">Unistructural</option>
+                                            <option value="Multistructural">Multistructural (Batas 75)</option>
+                                            <option value="Relational">Relational</option>
+                                            <option value="ExtendedAbstract">Extended Abstract</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold text-slate-700">Rentang Nilai Konversi Angka per Level SOLO:</p>
+                                        {["Prestructural", "Unistructural", "Multistructural", "Relational", "ExtendedAbstract"].map((lvl) => (
+                                            <div key={lvl} className="flex items-center justify-between text-xs p-2 border rounded-lg bg-slate-50">
+                                                <span className="font-bold text-slate-700 w-32">{lvl}:</span>
+                                                <div className="flex items-center gap-2">
+                                                    <input 
+                                                        type="number" 
+                                                        value={modalData.ranges?.[lvl]?.min ?? 0} 
+                                                        onChange={e => setModalData({
+                                                            ...modalData,
+                                                            ranges: {
+                                                                ...modalData.ranges,
+                                                                [lvl]: { ...modalData.ranges[lvl], min: Number(e.target.value) }
+                                                            }
+                                                        })}
+                                                        className="w-16 px-2 py-1 border rounded text-center text-xs" 
+                                                    />
+                                                    <span>-</span>
+                                                    <input 
+                                                        type="number" 
+                                                        value={modalData.ranges?.[lvl]?.max ?? 100} 
+                                                        onChange={e => setModalData({
+                                                            ...modalData,
+                                                            ranges: {
+                                                                ...modalData.ranges,
+                                                                [lvl]: { ...modalData.ranges[lvl], max: Number(e.target.value) }
+                                                            }
+                                                        })}
+                                                        className="w-16 px-2 py-1 border rounded text-center text-xs" 
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-3 border-t">
+                                        <button type="button" onClick={() => setActiveModal(null)} className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">Batal</button>
+                                        <button type="submit" className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md">Simpan KKTP</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- ASSESSMENT INPUT VIEW ---
+        function AssessmentInputView({ classes, students, curriculum, assessments, setAssessments, showToast }) {
+            const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
+            const [selectedTpId, setSelectedTpId] = useState("");
+
+            const currentStudents = students.filter(s => s.classId === selectedClassId);
+
+            const allTps = [];
+            curriculum.forEach(cp => cp.materials.forEach(m => m.tps.forEach(tp => allTps.push(tp))));
+            const selectedTp = allTps.find(t => t.id === selectedTpId) || allTps[0];
+
+            const currentScores = assessments[`${selectedClassId}_${selectedTp?.id}`] || {};
+
+            const handleScoreSelect = (studentId, iktpId, levelScore) => {
+                const key = `${selectedClassId}_${selectedTp.id}`;
+                setAssessments(prev => ({
+                    ...prev,
+                    [key]: {
+                        ...prev[key],
+                        [studentId]: {
+                            ...(prev[key]?.[studentId] || {}),
+                            [iktpId]: levelScore
+                        }
+                    }
+                }));
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">Input Penilaian Rubrik SOLO</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Pilih Kelas</label>
+                                <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
+                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Pilih TP (Tujuan Pembelajaran)</label>
+                                <select value={selectedTpId || selectedTp?.id} onChange={e => setSelectedTpId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
+                                    {allTps.map(tp => <option key={tp.id} value={tp.id}>[{tp.code}] {tp.description.slice(0, 45)}...</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {selectedTp && (
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                            <div className="flex justify-between items-center border-b pb-3">
+                                <div>
+                                    <h4 className="font-bold text-sm text-slate-800">{selectedTp.code}: {selectedTp.description}</h4>
+                                    <span className="text-xs text-purple-700 font-bold bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                                        Target KKTP: {selectedTp.kktpLevel || "Multistructural"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead className="bg-slate-100 text-slate-700 font-bold">
+                                        <tr>
+                                            <th className="p-3 border">No</th>
+                                            <th className="p-3 border">Nama Murid</th>
+                                            {selectedTp.iktps.map((ik, idx) => (
+                                                <th key={ik.id} className="p-3 border min-w-[180px]">IKTP {idx + 1}</th>
+                                            ))}
+                                            <th className="p-3 border text-center">Rata-rata SOLO</th>
+                                            <th className="p-3 border text-center">Nilai Angka</th>
+                                            <th className="p-3 border text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {currentStudents.map((st, i) => {
+                                            const studentScores = currentScores[st.id] || {};
+                                            const calc = calculateSoloScore(studentScores, selectedTp);
+                                            return (
+                                                <tr key={st.id} className="hover:bg-slate-50">
+                                                    <td className="p-3 border font-semibold">{i + 1}</td>
+                                                    <td className="p-3 border font-bold text-slate-800">{st.name}</td>
+                                                    {selectedTp.iktps.map(ik => {
+                                                        const currentLvl = studentScores[ik.id] || 0;
+                                                        return (
+                                                            <td key={ik.id} className="p-3 border">
+                                                                <select 
+                                                                    value={currentLvl} 
+                                                                    onChange={e => handleScoreSelect(st.id, ik.id, Number(e.target.value))}
+                                                                    className="w-full px-2 py-1 border rounded-lg text-[11px] font-semibold outline-none bg-slate-50"
+                                                                >
+                                                                    <option value={0}>-- Pilih Level --</option>
+                                                                    <option value={1}>1 - Prestructural</option>
+                                                                    <option value={2}>2 - Unistructural</option>
+                                                                    <option value={3}>3 - Multistructural</option>
+                                                                    <option value={4}>4 - Relational</option>
+                                                                    <option value={5}>5 - Extended Abstract</option>
+                                                                </select>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="p-3 border text-center font-mono font-bold text-brand-700">
+                                                        {calc && calc.isComplete ? calc.avgSolo : '-'}
+                                                    </td>
+                                                    <td className="p-3 border text-center font-mono font-bold text-slate-800">
+                                                        {calc && calc.isComplete ? calc.numericScore : '-'}
+                                                    </td>
+                                                    <td className="p-3 border text-center">
+                                                        {calc && calc.isComplete ? (
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${calc.isPassing ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                                                                {calc.isPassing ? 'Tercapai' : 'Belum'}
+                                                            </span>
+                                                        ) : '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- REPORTS VIEW ---
+        function ReportsView({ classes, students, curriculum, attendanceSessions, assessments, teacher, school }) {
+            const [activeSubTab, setActiveSubTab] = useState("attendance"); // attendance, classScores, studentScores
+            const [scoreType, setScoreType] = useState("process"); // process, semester
+            const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
+            const [selectedStudentId, setSelectedStudentId] = useState("");
+            const [selectedTpId, setSelectedTpId] = useState("ALL");
+            const [semesterScores, setSemesterScores] = useState({});
+
+            const currentStudents = students.filter(s => s.classId === selectedClassId);
+            const currentClass = classes.find(c => c.id === selectedClassId);
+
+            const allTps = [];
+            curriculum.forEach(cp => cp.materials.forEach(m => m.tps.forEach(tp => allTps.push(tp))));
+
+            const handleSemesterScoreChange = (studentId, val) => {
+                setSemesterScores(prev => ({
+                    ...prev,
+                    [`${selectedClassId}_${studentId}`]: val
+                }));
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 no-print">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-800">Pusat Laporan Resmi SIPAKATAU</h3>
+                                <p className="text-xs text-slate-500">Cetak dan unduh administrasi rekap kehadiran & penilaian resmi.</p>
+                            </div>
+                            <button onClick={handlePrint} className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2">
+                                <i className="fa-solid fa-print"></i> Cetak / Save PDF
+                            </button>
+                        </div>
+
+                        {/* SUBMENU TABS */}
+                        <div className="flex border-b text-xs font-bold gap-4">
+                            <button onClick={() => setActiveSubTab("attendance")} className={`pb-2 ${activeSubTab === 'attendance' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>
+                                1. Rekap Kehadiran
+                            </button>
+                            <button onClick={() => setActiveSubTab("classScores")} className={`pb-2 ${activeSubTab === 'classScores' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>
+                                2. Laporan Nilai Kelas
+                            </button>
+                            <button onClick={() => setActiveSubTab("studentScores")} className={`pb-2 ${activeSubTab === 'studentScores' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>
+                                3. Laporan Nilai Individu
+                            </button>
+                        </div>
+
+                        {/* FILTERS */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-600 mb-1">Kelas</label>
+                                <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-1.5 border rounded-xl text-xs outline-none">
+                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+
+                            {activeSubTab !== "attendance" && (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Jenis Laporan Nilai</label>
+                                    <select value={scoreType} onChange={e => setScoreType(e.target.value)} className="w-full px-3 py-1.5 border rounded-xl text-xs outline-none">
+                                        <option value="process">Nilai Proses Pembelajaran (SOLO)</option>
+                                        <option value="semester">Nilai Akhir Semester</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            {activeSubTab === "studentScores" && (
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Pilih Murid</label>
+                                    <select value={selectedStudentId} onChange={e => setSelectedStudentId(e.target.value)} className="w-full px-3 py-1.5 border rounded-xl text-xs outline-none">
+                                        <option value="">-- Pilih Murid --</option>
+                                        {currentStudents.map(s => <option key={s.id} value={s.id}>{s.name} ({s.nis})</option>)}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* REPORT CANVAS (PRINT AREA) */}
+                    <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-md space-y-6 max-w-4xl mx-auto">
+                        {/* KOP LAPORAN RESMI */}
+                        <div className="flex items-center gap-4 border-b-2 border-slate-800 pb-4">
+                            {school.logoUrl ? (
+                                <img src={school.logoUrl} className="w-16 h-16 object-contain" />
+                            ) : (
+                                <div className="w-16 h-16 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold text-xs border">Logo</div>
+                            )}
+                            <div className="flex-1 text-center">
+                                <h4 className="font-extrabold text-sm uppercase text-slate-800">{school.agency || "DINAS PENDIDIKAN KABUPATEN GOWA"}</h4>
+                                <h3 className="font-black text-base uppercase text-slate-900">{school.name}</h3>
+                                <p className="text-[11px] text-slate-600">{school.address} - {school.district}, {school.regency}</p>
+                            </div>
+                        </div>
+
+                        {/* LAPORAN REKAP KEHADIRAN */}
+                        {activeSubTab === "attendance" && (
+                            <div className="space-y-4">
+                                <div className="text-center">
+                                    <h3 className="font-bold text-sm uppercase text-slate-800">REKAP KEHADIRAN MURID</h3>
+                                    <p className="text-xs text-slate-600">Kelas: {currentClass?.name} | Semester Ganjil 2024/2025</p>
+                                </div>
+
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead className="bg-slate-100 font-bold border text-slate-800">
+                                        <tr>
+                                            <th className="p-2 border">No</th>
+                                            <th className="p-2 border">Nama Murid</th>
+                                            <th className="p-2 border">NIS</th>
+                                            <th className="p-2 border text-center">Hadir</th>
+                                            <th className="p-2 border text-center">Izin</th>
+                                            <th className="p-2 border text-center">Sakit</th>
+                                            <th className="p-2 border text-center">Alpa</th>
+                                            <th className="p-2 border text-center">Terlambat</th>
+                                            <th className="p-2 border text-center">% Kehadiran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {currentStudents.map((st, i) => {
+                                            const sessions = attendanceSessions.filter(a => a.classId === selectedClassId);
+                                            let h=0, iz=0, s=0, a=0, t=0;
+                                            sessions.forEach(sess => {
+                                                const stt = sess.records[st.id] || "Hadir";
+                                                if (stt === "Hadir") h++;
+                                                else if (stt === "Izin") iz++;
+                                                else if (stt === "Sakit") s++;
+                                                else if (stt === "Alpa") a++;
+                                                else if (stt === "Terlambat") t++;
+                                            });
+                                            const total = sessions.length || 1;
+                                            const pct = +(((h + t) / total) * 100).toFixed(1);
+                                            return (
+                                                <tr key={st.id}>
+                                                    <td className="p-2 border font-semibold">{i + 1}</td>
+                                                    <td className="p-2 border font-bold text-slate-800">{st.name}</td>
+                                                    <td className="p-2 border font-mono">{st.nis}</td>
+                                                    <td className="p-2 border text-center font-bold text-emerald-700">{h}</td>
+                                                    <td className="p-2 border text-center text-blue-700">{iz}</td>
+                                                    <td className="p-2 border text-center text-amber-700">{s}</td>
+                                                    <td className="p-2 border text-center text-rose-700">{a}</td>
+                                                    <td className="p-2 border text-center text-purple-700">{t}</td>
+                                                    <td className="p-2 border text-center font-mono font-bold text-slate-800">{pct}%</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* LAPORAN NILAI KELAS */}
+                        {activeSubTab === "classScores" && (
+                            <div className="space-y-4">
+                                <div className="text-center">
+                                    <h3 className="font-bold text-sm uppercase text-slate-800">
+                                        {scoreType === 'process' ? 'LAPORAN NILAI PROSES PEMBELAJARAN (TAKSONOMI SOLO)' : 'LAPORAN NILAI AKHIR SEMESTER'}
+                                    </h3>
+                                    <p className="text-xs text-slate-600">Kelas: {currentClass?.name} | Mata Pelajaran: {teacher.subject}</p>
+                                </div>
+
+                                {scoreType === 'process' ? (
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead className="bg-slate-100 font-bold border text-slate-800">
+                                            <tr>
+                                                <th className="p-2 border">No</th>
+                                                <th className="p-2 border">Nama Murid</th>
+                                                <th className="p-2 border">NIS</th>
+                                                <th className="p-2 border text-center">Rata-rata SOLO</th>
+                                                <th className="p-2 border text-center">Level Base</th>
+                                                <th className="p-2 border text-center">Nilai Angka</th>
+                                                <th className="p-2 border text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200">
+                                            {currentStudents.map((st, i) => {
+                                                const tp = allTps[0];
+                                                const studentScores = assessments[`${selectedClassId}_${tp?.id}`]?.[st.id] || {};
+                                                const calc = tp ? calculateSoloScore(studentScores, tp) : null;
+                                                return (
+                                                    <tr key={st.id}>
+                                                        <td className="p-2 border font-semibold">{i + 1}</td>
+                                                        <td className="p-2 border font-bold text-slate-800">{st.name}</td>
+                                                        <td className="p-2 border font-mono">{st.nis}</td>
+                                                        <td className="p-2 border text-center font-mono font-bold">{calc?.isComplete ? calc.avgSolo : '-'}</td>
+                                                        <td className="p-2 border text-center text-[11px] font-semibold">{calc?.isComplete ? calc.levelBase : '-'}</td>
+                                                        <td className="p-2 border text-center font-mono font-bold text-brand-700">{calc?.isComplete ? calc.numericScore : '-'}</td>
+                                                        <td className="p-2 border text-center font-bold">{calc?.isComplete ? (calc.isPassing ? 'Tercapai' : 'Belum') : '-'}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead className="bg-slate-100 font-bold border text-slate-800">
+                                            <tr>
+                                                <th className="p-2 border">No</th>
+                                                <th className="p-2 border">Nama Murid</th>
+                                                <th className="p-2 border">NIS</th>
+                                                <th className="p-2 border text-center">Nilai Akhir Semester</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200">
+                                            {currentStudents.map((st, i) => {
+                                                const scoreVal = semesterScores[`${selectedClassId}_${st.id}`] || "";
+                                                return (
+                                                    <tr key={st.id}>
+                                                        <td className="p-2 border font-semibold">{i + 1}</td>
+                                                        <td className="p-2 border font-bold text-slate-800">{st.name}</td>
+                                                        <td className="p-2 border font-mono">{st.nis}</td>
+                                                        <td className="p-2 border text-center">
+                                                            <input 
+                                                                type="number" 
+                                                                value={scoreVal}
+                                                                onChange={e => handleSemesterScoreChange(st.id, e.target.value)}
+                                                                placeholder="Belum Diisi"
+                                                                className="w-24 px-2 py-1 border rounded text-center text-xs font-bold outline-none no-print"
+                                                            />
+                                                            <span className="print-only font-bold text-sm">{scoreVal || 'Belum Diisi'}</span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        )}
+
+                        {/* LAPORAN NILAI INDIVIDU */}
+                        {activeSubTab === "studentScores" && (
+                            <div className="space-y-4">
+                                {selectedStudentId ? (
+                                    (() => {
+                                        const st = students.find(s => s.id === selectedStudentId);
+                                        const tp = allTps[0];
+                                        const studentScores = assessments[`${selectedClassId}_${tp?.id}`]?.[st?.id] || {};
+                                        const calc = tp ? calculateSoloScore(studentScores, tp) : null;
+
+                                        return (
+                                            <div className="space-y-4">
+                                                <div className="border-b pb-3">
+                                                    <h3 className="font-bold text-sm uppercase text-slate-800 text-center">LAPORAN CAPAIAN HASIL BELAJAR MURID</h3>
+                                                    <div className="grid grid-cols-2 text-xs mt-3 gap-1">
+                                                        <div><span className="font-bold">Nama Murid:</span> {st?.name}</div>
+                                                        <div><span className="font-bold">Mata Pelajaran:</span> {teacher.subject}</div>
+                                                        <div><span className="font-bold">NIS / NISN:</span> {st?.nis} / {st?.nisn || '-'}</div>
+                                                        <div><span className="font-bold">Kelas:</span> {currentClass?.name}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <h4 className="font-bold text-xs text-slate-800">I. Hasil Penilaian Taksonomi SOLO</h4>
+                                                    <div className="border p-3 rounded-xl bg-slate-50 text-xs space-y-1">
+                                                        <p><strong>Tujuan Pembelajaran:</strong> {tp?.description}</p>
+                                                        <p><strong>Rata-rata SOLO:</strong> <span className="font-bold text-brand-700">{calc?.isComplete ? calc.avgSolo : '-'}</span></p>
+                                                        <p><strong>Level Kualitas Pemahaman:</strong> <span className="font-bold">{calc?.isComplete ? calc.levelBase : '-'}</span></p>
+                                                        <p><strong>Nilai Angka Konversi:</strong> <span className="font-bold text-slate-800">{calc?.isComplete ? calc.numericScore : '-'}</span></p>
+                                                        <p><strong>Status Ketuntasan (KKTP):</strong> <span className="font-bold">{calc?.isComplete ? (calc.isPassing ? 'Tercapai' : 'Belum') : '-'}</span></p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <h4 className="font-bold text-xs text-slate-800">II. Deskripsi Capaian & Rekomendasi (AI Assistant)</h4>
+                                                    <div className="p-3 border rounded-xl bg-purple-50/40 text-xs space-y-2">
+                                                        <p className="text-slate-700">
+                                                            <strong>Deskripsi Capaian:</strong> Murid menunjukkan pemahaman kualitas <em>{calc?.levelBase || 'Multistructural'}</em> dalam mengidentifikasi komponen materi genetik serta dapat menghubungkan konsep persilangan.
+                                                        </p>
+                                                        <p className="text-slate-700">
+                                                            <strong>Rekomendasi Tindak Lanjut:</strong> Diberikan pengayaan analisis studi kasus variasi genetik lanjutan pada lingkungan sekitar.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()
+                                ) : (
+                                    <p className="text-center text-xs text-slate-400 italic py-6">Silakan pilih murid pada filter di atas untuk melihat laporan individu.</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* TANDA TANGAN */}
+                        <div className="pt-8 grid grid-cols-2 text-center text-xs gap-8 border-t mt-8">
+                            <div>
+                                {school.principalName && (
+                                    <>
+                                        <p>Mengetahui,</p>
+                                        <p className="font-bold">Kepala Sekolah</p>
+                                        <div className="h-16"></div>
+                                        <p className="font-bold underline">{school.principalName}</p>
+                                        <p>NIP. {school.principalNip || '-'}</p>
+                                    </>
+                                )}
+                            </div>
+                            <div>
+                                <p>Sungguminasa, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                <p className="font-bold">Guru Mata Pelajaran</p>
+                                <div className="h-16"></div>
+                                <p className="font-bold underline">{teacher.name}</p>
+                                <p>NIP. {teacher.nip || '-'}</p>
                             </div>
                         </div>
                     </div>
@@ -497,29 +2193,68 @@
             const [curriculum, setCurriculum] = useState(INITIAL_CURRICULUM);
             const [attendanceSessions, setAttendanceSessions] = useState([]);
             const [assessments, setAssessments] = useState({});
+            const [toast, setToast] = useState(null);
+
+            const showToast = (msg, type = "success") => {
+                setToast({ msg, type });
+                setTimeout(() => setToast(null), 3000);
+            };
 
             return (
                 <div className="flex min-h-screen">
+                    {/* SIDEBAR NAVIGATION */}
                     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 no-print shrink-0 hidden md:flex">
                         <div className="space-y-6">
                             <div className="flex items-center gap-3 px-2">
-                                <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-lg shadow-md">S</div>
-                                <div><h1 className="font-black text-base text-white tracking-wider">SIPAKATAU</h1><p className="text-[10px] text-brand-300 font-semibold">Assessment Platform</p></div>
+                                <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-lg shadow-md">
+                                    S
+                                </div>
+                                <div>
+                                    <h1 className="font-black text-base text-white tracking-wider">SIPAKATAU</h1>
+                                    <p className="text-[10px] text-brand-300 font-semibold">Student Growth & Assessment</p>
+                                </div>
                             </div>
+
                             <nav className="space-y-1">
                                 {[
                                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
+                                    { id: 'identity', label: 'Identitas Guru & Sekolah', icon: 'fa-id-card' },
+                                    { id: 'classes', label: 'Data Kelas', icon: 'fa-chalkboard' },
+                                    { id: 'students', label: 'Data Murid', icon: 'fa-user-graduate' },
+                                    { id: 'attendance', label: 'Kehadiran Murid', icon: 'fa-calendar-check' },
+                                    { id: 'curriculum', label: 'Kurikulum & Rubrik SOLO', icon: 'fa-book-open-reader' },
+                                    { id: 'assessmentInput', label: 'Input Penilaian SOLO', icon: 'fa-pen-to-square' },
                                     { id: 'reports', label: 'Laporan Resmi', icon: 'fa-file-signature' },
                                 ].map(item => (
-                                    <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id ? 'bg-brand-600 text-white shadow-md' : 'hover:bg-slate-800 text-slate-400'}`}>
-                                        <i className={`fa-solid ${item.icon} text-sm w-5`}></i>{item.label}
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setActiveTab(item.id)}
+                                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                            activeTab === item.id ? 'bg-brand-600 text-white shadow-md' : 'hover:bg-slate-800 text-slate-400'
+                                        }`}
+                                    >
+                                        <i className={`fa-solid ${item.icon} text-sm w-5`}></i>
+                                        {item.label}
                                     </button>
                                 ))}
                             </nav>
                         </div>
+
+                        <div className="border-t border-slate-800 pt-4 px-2 text-[11px] text-slate-500">
+                            <p className="font-bold text-slate-400">SIPAKATAU v2.0</p>
+                            <p>Pengembang: <strong>Hasdinar, S.Pd.</strong></p>
+                            <p>Dinas Pendidikan Kab. Gowa</p>
+                        </div>
                     </aside>
 
+                    {/* MAIN CONTENT AREA */}
                     <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+                        {toast && (
+                            <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white flex items-center gap-2 ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'}`}>
+                                <i className="fa-solid fa-circle-check"></i> {toast.msg}
+                            </div>
+                        )}
+
                         {activeTab === 'dashboard' && (
                             <DashboardView 
                                 classes={classes} students={students} curriculum={curriculum} 
@@ -527,11 +2262,19 @@
                                 teacher={teacher} school={school} setActiveTab={setActiveTab} 
                             />
                         )}
+                        {activeTab === 'identity' && <IdentityView teacher={teacher} setTeacher={setTeacher} school={school} setSchool={setSchool} showToast={showToast} />}
+                        {activeTab === 'classes' && <ClassesView classes={classes} setClasses={setClasses} showToast={showToast} />}
+                        {activeTab === 'students' && <StudentsView students={students} setStudents={setStudents} classes={classes} showToast={showToast} />}
+                        {activeTab === 'attendance' && <AttendanceView classes={classes} students={students} attendanceSessions={attendanceSessions} setAttendanceSessions={setAttendanceSessions} showToast={showToast} />}
+                        {activeTab === 'curriculum' && <CurriculumView curriculum={curriculum} setCurriculum={setCurriculum} showToast={showToast} />}
+                        {activeTab === 'assessmentInput' && <AssessmentInputView classes={classes} students={students} curriculum={curriculum} assessments={assessments} setAssessments={setAssessments} showToast={showToast} />}
+                        {activeTab === 'reports' && <ReportsView classes={classes} students={students} curriculum={curriculum} attendanceSessions={attendanceSessions} assessments={assessments} teacher={teacher} school={school} />}
                     </main>
                 </div>
             );
         }
 
+        // RENDER REACT APP
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
