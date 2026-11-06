@@ -30,7 +30,7 @@
         }
     </script>
 
-    <!-- Font Inter & FontAwesome Icons -->
+    <!-- FontInter & FontAwesome Icons -->
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -62,7 +62,7 @@
     <div id="root">
         <div class="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-900 text-white">
             <div class="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p class="text-sm font-bold tracking-wider">Menghubungkan ke Cloud Database...</p>
+            <p class="text-sm font-bold tracking-wider">Memuat SIPAKATAU Cloud...</p>
         </div>
     </div>
 
@@ -292,6 +292,22 @@
                 };
             }, [allTps, filteredStudents, assessments, selectedClassId]);
 
+            const reminders = useMemo(() => {
+                const list = [];
+                classes.forEach(c => {
+                    const hasAtt = attendance.some(a => (a.class_id || a.classId) === c.id);
+                    if (!hasAtt) {
+                        list.push({ type: 'warning', text: `Kelas ${c.name} belum memiliki catatan pertemuan kehadiran.` });
+                    }
+                });
+                allTps.forEach(tp => {
+                    if (!tp.iktps || tp.iktps.length === 0) {
+                        list.push({ type: 'info', text: `TP "${tp.code}" belum memiliki IKTP / Rubrik SOLO.` });
+                    }
+                });
+                return list;
+            }, [classes, attendance, allTps]);
+
             const todayFormatted = new Date().toLocaleDateString('id-ID', {
                 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
             });
@@ -299,9 +315,12 @@
             return (
                 <div className="space-y-6 max-w-7xl mx-auto">
                     <div className="bg-gradient-to-r from-brand-800 via-brand-700 to-indigo-700 text-white p-6 md:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+                        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                            <i className="fa-solid fa-graduation-cap text-[180px]"></i>
+                        </div>
                         <div className="space-y-2 z-10">
                             <div className="flex flex-wrap items-center gap-2 text-xs">
-                                <span className="bg-white/25 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full border border-white/20">
+                                <span className="bg-white/20 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full border border-white/20">
                                     <i className="fa-solid fa-school mr-1.5"></i> {school.name}
                                 </span>
                                 <span className="bg-brand-500/40 text-brand-100 font-medium px-3 py-1 rounded-full border border-brand-400/30">
@@ -312,9 +331,25 @@
                                 Selamat Datang, {teacher.name || "Bapak/Ibu Guru"}! 👋
                             </h2>
                             <p className="text-brand-100 text-xs md:text-sm max-w-2xl leading-relaxed">
-                                SIPAKATAU Cloud Database Mode - Seluruh data kelas, murid, presensi, dan penilaian tersimpan aman di Supabase.
+                                SIPAKATAU (Student Growth & Assessment Platform) - Terhubung ke Supabase Cloud Database.
                             </p>
                         </div>
+                        <div className="flex flex-col sm:flex-row gap-3 z-10 shrink-0">
+                            <button onClick={() => setActiveTab('reports')} className="bg-white text-brand-900 hover:bg-brand-50 font-bold text-xs px-5 py-3 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
+                                <i className="fa-solid fa-file-invoice text-brand-600"></i> Buka Laporan Resmi
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                        <div className="flex items-center gap-2">
+                            <i className="fa-solid fa-filter text-brand-600 text-xs"></i>
+                            <span className="text-xs font-bold text-slate-700">Filter Tampilan Dashboard:</span>
+                        </div>
+                        <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="px-3 py-1.5 border rounded-xl text-xs font-semibold text-slate-800 bg-slate-50 outline-none">
+                            <option value="ALL">Semua Kelas ({classes.length})</option>
+                            {classes.map(c => <option key={c.id} value={c.id}>Kelas {c.name}</option>)}
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -324,7 +359,7 @@
                         </div>
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold shrink-0"><i className="fa-solid fa-user-graduate"></i></div>
-                            <div><p className="text-xs text-slate-500 font-medium font-medium">Total Murid</p><h3 className="text-2xl font-extrabold text-slate-800">{filteredStudents.length}</h3></div>
+                            <div><p className="text-xs text-slate-500 font-medium">Total Murid</p><h3 className="text-2xl font-extrabold text-slate-800">{filteredStudents.length}</h3></div>
                         </div>
                         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold shrink-0"><i className="fa-solid fa-calendar-check"></i></div>
@@ -335,6 +370,32 @@
                             <div><p className="text-xs text-slate-500 font-medium">TP Dinilai</p><h3 className="text-2xl font-extrabold text-slate-800">{assessmentStats.assessedTpCount} / {allTps.length}</h3></div>
                         </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                            <div className="flex justify-between items-center border-b pb-3">
+                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2"><i className="fa-solid fa-user-check text-brand-600"></i> Kehadiran Klasikal</h3>
+                                <span className="text-xs font-bold bg-brand-50 text-brand-700 px-3 py-1 rounded-full">{attendanceStats.attendancePct}%</span>
+                            </div>
+                            <div className="grid grid-cols-5 gap-2 text-center">
+                                <div className="p-2 bg-emerald-50 rounded-xl"><span className="text-[10px] font-bold text-emerald-700 block">Hadir</span><span className="font-extrabold">{attendanceStats.h}</span></div>
+                                <div className="p-2 bg-blue-50 rounded-xl"><span className="text-[10px] font-bold text-blue-700 block">Izin</span><span className="font-extrabold">{attendanceStats.iz}</span></div>
+                                <div className="p-2 bg-amber-50 rounded-xl"><span className="text-[10px] font-bold text-amber-700 block">Sakit</span><span className="font-extrabold">{attendanceStats.s}</span></div>
+                                <div className="p-2 bg-rose-50 rounded-xl"><span className="text-[10px] font-bold text-rose-700 block">Alpa</span><span className="font-extrabold">{attendanceStats.a}</span></div>
+                                <div className="p-2 bg-purple-50 rounded-xl"><span className="text-[10px] font-bold text-purple-700 block">Telat</span><span className="font-extrabold">{attendanceStats.t}</span></div>
+                            </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+                            <div className="flex justify-between items-center border-b pb-3">
+                                <h3 className="text-base font-bold text-slate-800 flex items-center gap-2"><i className="fa-solid fa-chart-line text-brand-600"></i> Kelengkapan Penilaian</h3>
+                                <span className="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full">{assessmentStats.completionPct}%</span>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-xs font-semibold"><span>Tingkat Kelulusan KKTP</span><span className="font-bold text-emerald-600">{assessmentStats.passRatePct}%</span></div>
+                                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden"><div className="bg-brand-600 h-full" style={{ width: `${assessmentStats.passRatePct}%` }}></div></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             );
         }
@@ -343,7 +404,7 @@
         function IdentityView({ teacher, setTeacher, school, setSchool, showToast }) {
             const handleSave = (e) => {
                 e.preventDefault();
-                showToast("Identitas berhasil diperbarui!");
+                showToast("Identitas berhasil disimpan!");
             };
 
             const handleLogoUpload = (e) => {
@@ -362,33 +423,16 @@
                 <div className="space-y-6 max-w-4xl">
                     <form onSubmit={handleSave} className="space-y-6">
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
-                                <i className="fa-solid fa-school text-brand-600"></i> Identitas Sekolah & Kop Laporan
-                            </h3>
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3"><i className="fa-solid fa-school text-brand-600 mr-2"></i>Identitas Sekolah & Kop Laporan</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Sekolah</label>
-                                    <input type="text" value={school.name} onChange={e => setSchool({...school, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">NPSN</label>
-                                    <input type="text" value={school.npsn} onChange={e => setSchool({...school, npsn: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Alamat Sekolah</label>
-                                    <input type="text" value={school.address} onChange={e => setSchool({...school, address: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Kepala Sekolah</label>
-                                    <input type="text" value={school.principalName} onChange={e => setSchool({...school, principalName: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">NIP Kepala Sekolah</label>
-                                    <input type="text" value={school.principalNip} onChange={e => setSchool({...school, principalNip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                </div>
+                                <div><label className="block text-xs font-semibold mb-1">Nama Sekolah</label><input type="text" value={school.name} onChange={e => setSchool({...school, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required /></div>
+                                <div><label className="block text-xs font-semibold mb-1">NPSN</label><input type="text" value={school.npsn} onChange={e => setSchool({...school, npsn: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
+                                <div className="md:col-span-2"><label className="block text-xs font-semibold mb-1">Alamat Sekolah</label><input type="text" value={school.address} onChange={e => setSchool({...school, address: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Nama Kepala Sekolah</label><input type="text" value={school.principalName} onChange={e => setSchool({...school, principalName: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">NIP Kepala Sekolah</label><input type="text" value={school.principalNip} onChange={e => setSchool({...school, principalNip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
                             </div>
                             <div className="pt-2 border-t">
-                                <label className="block text-xs font-semibold text-slate-600 mb-2">Logo Sekolah</label>
+                                <label className="block text-xs font-semibold mb-2">Logo Sekolah</label>
                                 <div className="flex items-center gap-4">
                                     {school.logoUrl && <img src={school.logoUrl} className="w-14 h-14 object-contain border rounded-xl p-1 bg-slate-50" />}
                                     <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-xs text-slate-500" />
@@ -397,36 +441,21 @@
                         </div>
 
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
-                                <i className="fa-solid fa-chalkboard-user text-brand-600"></i> Identitas Guru Mata Pelajaran
-                            </h3>
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3"><i className="fa-solid fa-chalkboard-user text-brand-600 mr-2"></i>Identitas Guru</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
-                                    <input type="text" value={teacher.name} onChange={e => setTeacher({...teacher, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">NIP</label>
-                                    <input type="text" value={teacher.nip} onChange={e => setTeacher({...teacher, nip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
-                                    <input type="text" value={teacher.subject} onChange={e => setTeacher({...teacher, subject: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" />
-                                </div>
+                                <div><label className="block text-xs font-semibold mb-1">Nama Lengkap & Gelar</label><input type="text" value={teacher.name} onChange={e => setTeacher({...teacher, name: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required /></div>
+                                <div><label className="block text-xs font-semibold mb-1">NIP</label><input type="text" value={teacher.nip} onChange={e => setTeacher({...teacher, nip: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Mata Pelajaran</label><input type="text" value={teacher.subject} onChange={e => setTeacher({...teacher, subject: e.target.value})} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" /></div>
                             </div>
                         </div>
 
-                        <div className="flex justify-end">
-                            <button type="submit" className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md transition-all">
-                                <i className="fa-solid fa-floppy-disk mr-2"></i> Simpan Identitas
-                            </button>
-                        </div>
+                        <div className="flex justify-end"><button type="submit" className="bg-brand-600 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-md">Simpan Identitas</button></div>
                     </form>
                 </div>
             );
         }
 
-        // --- CLASSES VIEW (SUPABASE INTEGRATED) ---
+        // --- CLASSES VIEW (SUPABASE CONNECTED) ---
         function ClassesView({ classes, showToast, refreshData }) {
             const [className, setClassName] = useState("");
             const [grade, setGrade] = useState("VII");
@@ -459,13 +488,13 @@
             return (
                 <div className="space-y-6 max-w-4xl">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Kelas Baru</h3>
+                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Kelas Baru (Database)</h3>
                         <form onSubmit={handleAddClass} className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <input type="text" placeholder="Nama Kelas (Misal: VII C)" value={className} onChange={e => setClassName(e.target.value)} className="px-3 py-2 border rounded-xl text-xs outline-none" required />
                             <select value={grade} onChange={e => setGrade(e.target.value)} className="px-3 py-2 border rounded-xl text-xs outline-none">
                                 <option value="VII">Tingkat VII</option><option value="VIII">Tingkat VIII</option><option value="IX">Tingkat IX</option>
                             </select>
-                            <button type="submit" disabled={loading} className="bg-brand-600 text-white font-bold text-xs py-2 rounded-xl shadow-md">{loading ? 'Simpan...' : '+ Simpan Kelas'}</button>
+                            <button type="submit" disabled={loading} className="bg-brand-600 text-white font-bold text-xs py-2 rounded-xl shadow-md">{loading ? 'Menyimpan...' : '+ Simpan Kelas'}</button>
                         </form>
                     </div>
 
@@ -484,60 +513,146 @@
             );
         }
 
-        // --- STUDENTS VIEW (SUPABASE INTEGRATED) ---
+        // --- STUDENTS VIEW (SUPABASE CONNECTED + EXCEL IMPORT) ---
         function StudentsView({ students, classes, showToast, refreshData }) {
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
             const [name, setName] = useState("");
             const [nis, setNis] = useState("");
             const [nisn, setNisn] = useState("");
             const [gender, setGender] = useState("L");
-            const [loading, setLoading] = useState(false);
+
+            const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+            const [importTargetClassId, setImportTargetClassId] = useState(classes[0]?.id || "");
+            const [validationResult, setValidationResult] = useState({ valid: [], invalid: [] });
 
             useEffect(() => {
                 if (classes.length > 0 && !selectedClassId) setSelectedClassId(classes[0].id);
+                if (classes.length > 0 && !importTargetClassId) setImportTargetClassId(classes[0].id);
             }, [classes]);
 
             const handleAdd = async (e) => {
                 e.preventDefault();
                 if (!name || !nis) return alert("Nama dan NIS wajib diisi!");
-                setLoading(true);
 
                 if (supabase) {
                     const { error } = await supabase.from('students').insert([{ class_id: selectedClassId, name, nis, nisn, gender }]);
-                    if (error) alert("Gagal menyimpan murid: " + error.message);
-                    else refreshData();
+                    if (error) { alert("Gagal menyimpan: " + error.message); return; }
+                    refreshData();
                 }
 
-                setName(""); setNis(""); setNisn(""); setLoading(false);
-                showToast("Murid berhasil disimpan ke Cloud!");
+                setName(""); setNis(""); setNisn("");
+                showToast("Murid berhasil ditambahkan ke Cloud!");
             };
 
             const handleDelete = async (id) => {
                 if (!confirm("Hapus data murid ini?")) return;
                 if (supabase) {
                     const { error } = await supabase.from('students').delete().eq('id', id);
-                    if (error) alert("Gagal menghapus: " + error.message);
-                    else refreshData();
+                    if (error) { alert("Gagal menghapus: " + error.message); return; }
+                    refreshData();
                 }
                 showToast("Murid dihapus.", "error");
+            };
+
+            const downloadTemplate = () => {
+                const templateData = [
+                    ["No", "Nama Lengkap", "NIS", "NISN", "Jenis Kelamin", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Alamat"],
+                    [1, "Andi Ahmad Rivaldi", "24001", "0081234561", "L", classes[0]?.name || "VII A", "Sungguminasa", "2011-05-12", "Jl. Tumanurung No. 5"]
+                ];
+                const ws = XLSX.utils.aoa_to_sheet(templateData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Template_Murid");
+                XLSX.writeFile(wb, "Template_Import_Murid_SIPAKATAU.xlsx");
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const bstr = evt.target.result;
+                        const wb = XLSX.read(bstr, { type: 'binary' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+                        if (data.length <= 1) { alert("File Excel kosong!"); return; }
+
+                        const rows = data.slice(1);
+                        const validList = [];
+                        const invalidList = [];
+
+                        rows.forEach((row, idx) => {
+                            if (!row || row.length === 0 || row.every(c => c === null || String(c).trim() === "")) return;
+                            const rowName = row[1] ? String(row[1]).trim() : "";
+                            const rowNis = row[2] ? String(row[2]).trim() : "";
+                            const rowNisn = row[3] ? String(row[3]).trim() : "";
+                            const rowGender = row[4] ? String(row[4]).trim().toUpperCase() : "L";
+
+                            const errors = [];
+                            if (!rowName) errors.push("Nama kosong");
+                            if (!rowNis) errors.push("NIS kosong");
+
+                            if (errors.length > 0) {
+                                invalidList.push({ rowNo: idx + 2, name: rowName || '-', nis: rowNis || '-', errors });
+                            } else {
+                                validList.push({
+                                    class_id: importTargetClassId,
+                                    name: rowName,
+                                    nis: rowNis,
+                                    nisn: rowNisn,
+                                    gender: (rowGender === 'P' || rowGender === 'PEREMPUAN') ? 'P' : 'L'
+                                });
+                            }
+                        });
+
+                        setValidationResult({ valid: validList, invalid: invalidList });
+                    } catch (err) {
+                        alert("Gagal membaca file Excel.");
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            const handleCommitImport = async () => {
+                if (validationResult.valid.length === 0) return;
+
+                if (supabase) {
+                    const { error } = await supabase.from('students').insert(validationResult.valid);
+                    if (error) { alert("Gagal import ke database: " + error.message); return; }
+                    refreshData();
+                }
+
+                showToast(`Berhasil mengimpor ${validationResult.valid.length} data murid!`);
+                setIsImportModalOpen(false);
+                setValidationResult({ valid: [], invalid: [] });
             };
 
             const filtered = students.filter(s => (s.class_id || s.classId) === selectedClassId);
 
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex items-center gap-3">
                             <label className="text-xs font-bold text-slate-600">Pilih Kelas:</label>
                             <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="px-3 py-2 border rounded-xl text-sm font-semibold outline-none">
                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={downloadTemplate} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5">
+                                <i className="fa-solid fa-download text-brand-600"></i> Download Template
+                            </button>
+                            <button onClick={() => { setIsImportModalOpen(true); setImportTargetClassId(selectedClassId); }} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all flex items-center gap-1.5">
+                                <i className="fa-solid fa-file-excel"></i> Import Excel
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Murid Baru</h3>
+                            <h3 className="text-base font-bold text-slate-800 border-b pb-3">+ Tambah Murid Manual</h3>
                             <form onSubmit={handleAdd} className="space-y-3">
                                 <input type="text" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
                                 <input type="text" placeholder="NIS" value={nis} onChange={e => setNis(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
@@ -545,9 +660,7 @@
                                 <select value={gender} onChange={e => setGender(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
                                     <option value="L">Laki-laki</option><option value="P">Perempuan</option>
                                 </select>
-                                <button type="submit" disabled={loading} className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md">
-                                    {loading ? 'Menyimpan...' : 'Simpan Murid'}
-                                </button>
+                                <button type="submit" className="w-full bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-md">Simpan ke Cloud</button>
                             </form>
                         </div>
 
@@ -560,7 +673,7 @@
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {filtered.length === 0 ? (
-                                            <tr><td colSpan="5" className="p-4 text-center text-slate-400 italic">Belum ada data murid di kelas ini.</td></tr>
+                                            <tr><td colSpan="5" className="p-4 text-center text-slate-400 italic">Belum ada murid di kelas ini.</td></tr>
                                         ) : (
                                             filtered.map((st, i) => (
                                                 <tr key={st.id} className="hover:bg-slate-50">
@@ -579,18 +692,47 @@
                             </div>
                         </div>
                     </div>
+
+                    {isImportModalOpen && (
+                        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white p-6 rounded-2xl max-w-lg w-full space-y-4">
+                                <div className="flex justify-between items-center border-b pb-3">
+                                    <h3 className="text-base font-bold">Import Excel ke Database</h3>
+                                    <button onClick={() => setIsImportModalOpen(false)}><i className="fa-solid fa-xmark"></i></button>
+                                </div>
+                                <div className="space-y-3 text-xs">
+                                    <div>
+                                        <label className="font-semibold block mb-1">Pilih Kelas Tujuan:</label>
+                                        <select value={importTargetClassId} onChange={e => setImportTargetClassId(e.target.value)} className="w-full p-2 border rounded-xl">
+                                            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="font-semibold block mb-1">File Excel (.xlsx):</label>
+                                        <input type="file" accept=".xlsx" onChange={handleFileUpload} className="w-full text-slate-500" />
+                                    </div>
+                                    {validationResult.valid.length > 0 && (
+                                        <p className="text-emerald-700 font-bold">✓ {validationResult.valid.length} data valid siap diimpor.</p>
+                                    )}
+                                </div>
+                                <div className="flex justify-end gap-2 pt-3 border-t">
+                                    <button onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 border rounded-xl text-xs">Batal</button>
+                                    <button onClick={handleCommitImport} disabled={validationResult.valid.length === 0} className="px-5 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md disabled:bg-slate-300">Simpan Data</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
 
-        // --- ATTENDANCE VIEW (SUPABASE INTEGRATED) ---
-        function AttendanceView({ classes, students, showToast, refreshData }) {
+        // --- ATTENDANCE VIEW (SUPABASE CONNECTED) ---
+        function AttendanceView({ classes, students, attendanceSessions, showToast, refreshData }) {
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
             const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
             const [sessionNo, setSessionNo] = useState(1);
             const [material, setMaterial] = useState("");
             const [records, setRecords] = useState({});
-            const [loading, setLoading] = useState(false);
 
             useEffect(() => {
                 if (classes.length > 0 && !selectedClassId) setSelectedClassId(classes[0].id);
@@ -610,7 +752,6 @@
 
             const handleSaveAttendance = async (e) => {
                 e.preventDefault();
-                setLoading(true);
                 if (supabase) {
                     const { error } = await supabase.from('attendance_sessions').insert([{
                         class_id: selectedClassId,
@@ -619,11 +760,11 @@
                         material,
                         records
                     }]);
-                    if (error) alert("Gagal menyimpan presensi: " + error.message);
-                    else refreshData();
+                    if (error) { alert("Gagal menyimpan: " + error.message); return; }
+                    refreshData();
                 }
-                showToast("Data presensi tersimpan ke Database!");
-                setRecords({}); setMaterial(""); setLoading(false);
+                showToast("Data kehadiran berhasil disimpan ke Cloud!");
+                setRecords({}); setMaterial("");
             };
 
             return (
@@ -631,47 +772,33 @@
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center justify-between">
                             <span>Input Kehadiran Per Pertemuan</span>
-                            <button onClick={markAllHadir} type="button" className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-3 py-1.5 rounded-lg">
-                                ✓ Tandai Semua Hadir
-                            </button>
+                            <button onClick={markAllHadir} type="button" className="text-xs bg-emerald-50 text-emerald-700 border font-bold px-3 py-1.5 rounded-lg">✓ Semua Hadir</button>
                         </h3>
 
                         <form onSubmit={handleSaveAttendance} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Kelas</label>
-                                    <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
-                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pertemuan</label>
-                                    <input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Pertemuan Ke-</label>
-                                    <input type="number" min="1" value={sessionNo} onChange={e => setSessionNo(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none" required />
-                                </div>
+                                <div><label className="block text-xs font-semibold mb-1">Kelas</label><select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+                                <div><label className="block text-xs font-semibold mb-1">Tanggal</label><input type="date" value={sessionDate} onChange={e => setSessionDate(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
+                                <div><label className="block text-xs font-semibold mb-1">Pertemuan Ke-</label><input type="number" min="1" value={sessionNo} onChange={e => setSessionNo(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" required /></div>
+                                <div className="md:col-span-3"><label className="block text-xs font-semibold mb-1">Materi</label><input type="text" value={material} onChange={e => setMaterial(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs" /></div>
                             </div>
 
                             <div className="border rounded-xl overflow-x-auto">
                                 <table className="w-full text-left text-xs">
-                                    <thead className="bg-slate-100 font-bold text-slate-700">
-                                        <tr><th className="p-3">No</th><th className="p-3">Nama Murid</th><th className="p-3 text-center">Status Kehadiran</th></tr>
+                                    <thead className="bg-slate-100 font-bold">
+                                        <tr><th className="p-3">No</th><th className="p-3">Nama</th><th className="p-3 text-center">Status</th></tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y">
                                         {currentStudents.map((st, i) => {
                                             const currentStatus = records[st.id] || "Hadir";
                                             return (
                                                 <tr key={st.id}>
                                                     <td className="p-3 font-semibold">{i + 1}</td>
-                                                    <td className="p-3 font-bold text-slate-800">{st.name}</td>
+                                                    <td className="p-3 font-bold">{st.name}</td>
                                                     <td className="p-3 text-center">
                                                         <div className="flex justify-center gap-1.5">
                                                             {["Hadir", "Izin", "Sakit", "Alpa", "Terlambat"].map(stt => (
-                                                                <button type="button" key={stt} onClick={() => handleStatusChange(st.id, stt)} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${currentStatus === stt ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                                                    {stt}
-                                                                </button>
+                                                                <button type="button" key={stt} onClick={() => handleStatusChange(st.id, stt)} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${currentStatus === stt ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{stt}</button>
                                                             ))}
                                                         </div>
                                                     </td>
@@ -681,19 +808,69 @@
                                     </tbody>
                                 </table>
                             </div>
-
-                            <div className="flex justify-end">
-                                <button type="submit" disabled={loading} className="bg-brand-600 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md">
-                                    {loading ? 'Menyimpan...' : 'Simpan Kehadiran'}
-                                </button>
-                            </div>
+                            <div className="flex justify-end"><button type="submit" className="bg-brand-600 text-white font-bold text-xs px-6 py-2.5 rounded-xl">Simpan Kehadiran</button></div>
                         </form>
                     </div>
                 </div>
             );
         }
 
-        // --- ASSESSMENT INPUT VIEW (SUPABASE INTEGRATED) ---
+        // --- CURRICULUM VIEW ---
+        function CurriculumView({ curriculum, setCurriculum, showToast }) {
+            const [expandedCp, setExpandedCp] = useState({});
+            const [expandedMat, setExpandedMat] = useState({});
+            const [activeModal, setActiveModal] = useState(null);
+            const [modalData, setModalData] = useState({});
+
+            const toggleCp = id => setExpandedCp(prev => ({ ...prev, [id]: !prev[id] }));
+            const toggleMat = id => setExpandedMat(prev => ({ ...prev, [id]: !prev[id] }));
+
+            return (
+                <div className="space-y-6">
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm flex justify-between items-center">
+                        <div><h3 className="text-base font-bold">Struktur Kurikulum & Rubrik SOLO</h3><p className="text-xs text-slate-500">Kelola CP, Materi, TP, IKTP.</p></div>
+                    </div>
+                    <div className="space-y-4">
+                        {curriculum.map(cp => (
+                            <div key={cp.id} className="bg-white border rounded-2xl overflow-hidden shadow-xs">
+                                <div className="p-4 bg-slate-900 text-white flex justify-between items-center cursor-pointer" onClick={() => toggleCp(cp.id)}>
+                                    <div><span className="text-xs font-bold bg-brand-500/30 px-2 py-0.5 rounded mr-2">Fase {cp.phase}</span><span className="font-bold text-sm">{cp.subject}</span><p className="text-xs text-slate-300 mt-1">{cp.description}</p></div>
+                                    <i className={`fa-solid ${expandedCp[cp.id] ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs`}></i>
+                                </div>
+                                {expandedCp[cp.id] && (
+                                    <div className="p-4 bg-slate-50 space-y-3">
+                                        {cp.materials.map(mat => (
+                                            <div key={mat.id} className="bg-white border rounded-xl overflow-hidden">
+                                                <div className="p-3 bg-slate-100 flex justify-between items-center cursor-pointer" onClick={() => toggleMat(mat.id)}>
+                                                    <span className="font-bold text-xs">Materi: {mat.title}</span>
+                                                    <i className={`fa-solid ${expandedMat[mat.id] ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs`}></i>
+                                                </div>
+                                                {expandedMat[mat.id] && (
+                                                    <div className="p-3 space-y-2">
+                                                        {mat.tps.map(tp => (
+                                                            <div key={tp.id} className="p-3 border rounded-lg bg-brand-50/20 space-y-2">
+                                                                <div className="font-bold text-xs text-brand-700">{tp.code}: {tp.description}</div>
+                                                                <div className="grid grid-cols-1 md:grid-cols-5 gap-1 text-[10px]">
+                                                                    {tp.iktps.map(ik => (
+                                                                        <div key={ik.id} className="p-2 bg-white border rounded"><span className="font-bold block">{ik.description}</span></div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // --- ASSESSMENT INPUT VIEW (SUPABASE CONNECTED) ---
         function AssessmentInputView({ classes, students, curriculum, assessments, showToast, refreshData }) {
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
             const [selectedTpId, setSelectedTpId] = useState("");
@@ -723,71 +900,55 @@
                         scores: newStudentScores
                     }], { onConflict: 'class_id,tp_id,student_id' });
 
-                    if (error) console.error("Gagal menyimpan skor:", error.message);
+                    if (error) console.error("Gagal simpan skor:", error.message);
                     else refreshData();
                 }
-                showToast("Nilai SOLO diperbarui di Cloud!");
+                showToast("Nilai SOLO tersimpan di Cloud!");
             };
 
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="text-base font-bold text-slate-800 border-b pb-3">Input Penilaian Rubrik SOLO</h3>
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4">
+                        <h3 className="text-base font-bold">Input Penilaian Rubrik SOLO</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Pilih Kelas</label>
-                                <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
-                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Pilih TP</label>
-                                <select value={selectedTpId || selectedTp?.id} onChange={e => setSelectedTpId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs outline-none">
-                                    {allTps.map(tp => <option key={tp.id} value={tp.id}>[{tp.code}] {tp.description.slice(0, 45)}...</option>)}
-                                </select>
-                            </div>
+                            <div><label className="text-xs font-semibold block mb-1">Kelas</label><select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+                            <div><label className="text-xs font-semibold block mb-1">TP</label><select value={selectedTpId || selectedTp?.id} onChange={e => setSelectedTpId(e.target.value)} className="w-full px-3 py-2 border rounded-xl text-xs">{allTps.map(tp => <option key={tp.id} value={tp.id}>[{tp.code}] {tp.description.slice(0, 40)}...</option>)}</select></div>
                         </div>
                     </div>
 
                     {selectedTp && (
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs border-collapse">
-                                    <thead className="bg-slate-100 text-slate-700 font-bold">
-                                        <tr>
-                                            <th className="p-3 border">No</th><th className="p-3 border">Nama Murid</th>
-                                            {selectedTp.iktps.map((ik, idx) => (<th key={ik.id} className="p-3 border">IKTP {idx + 1}</th>))}
-                                            <th className="p-3 border text-center">Rata-rata SOLO</th><th className="p-3 border text-center">Nilai Angka</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {currentStudents.map((st, i) => {
-                                            const studentScores = currentScores[st.id] || {};
-                                            const calc = calculateSoloScore(studentScores, selectedTp);
-                                            return (
-                                                <tr key={st.id}>
-                                                    <td className="p-3 border font-semibold">{i + 1}</td>
-                                                    <td className="p-3 border font-bold text-slate-800">{st.name}</td>
-                                                    {selectedTp.iktps.map(ik => (
-                                                        <td key={ik.id} className="p-3 border">
-                                                            <select value={studentScores[ik.id] || 0} onChange={e => handleScoreSelect(st.id, ik.id, Number(e.target.value))} className="w-full px-2 py-1 border rounded-lg text-[11px]">
-                                                                <option value={0}>-- Pilih --</option>
-                                                                <option value={1}>1 - Prestructural</option>
-                                                                <option value={2}>2 - Unistructural</option>
-                                                                <option value={3}>3 - Multistructural</option>
-                                                                <option value={4}>4 - Relational</option>
-                                                                <option value={5}>5 - Extended Abstract</option>
-                                                            </select>
-                                                        </td>
-                                                    ))}
-                                                    <td className="p-3 border text-center font-mono font-bold text-brand-700">{calc?.isComplete ? calc.avgSolo : '-'}</td>
-                                                    <td className="p-3 border text-center font-mono font-bold text-slate-800">{calc?.isComplete ? calc.numericScore : '-'}</td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead className="bg-slate-100 font-bold">
+                                    <tr><th className="p-3 border">No</th><th className="p-3 border">Nama</th>{selectedTp.iktps.map((ik, idx) => <th key={ik.id} className="p-3 border">IKTP {idx + 1}</th>)}<th className="p-3 border text-center">Rata-rata</th><th className="p-3 border text-center">Angka</th></tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {currentStudents.map((st, i) => {
+                                        const studentScores = currentScores[st.id] || {};
+                                        const calc = calculateSoloScore(studentScores, selectedTp);
+                                        return (
+                                            <tr key={st.id}>
+                                                <td className="p-3 border font-semibold">{i + 1}</td>
+                                                <td className="p-3 border font-bold">{st.name}</td>
+                                                {selectedTp.iktps.map(ik => (
+                                                    <td key={ik.id} className="p-3 border">
+                                                        <select value={studentScores[ik.id] || 0} onChange={e => handleScoreSelect(st.id, ik.id, Number(e.target.value))} className="w-full px-2 py-1 border rounded text-[11px]">
+                                                            <option value={0}>-- Pilih --</option>
+                                                            <option value={1}>1 - Prestructural</option>
+                                                            <option value={2}>2 - Unistructural</option>
+                                                            <option value={3}>3 - Multistructural</option>
+                                                            <option value={4}>4 - Relational</option>
+                                                            <option value={5}>5 - Extended Abstract</option>
+                                                        </select>
+                                                    </td>
+                                                ))}
+                                                <td className="p-3 border text-center font-bold text-brand-700">{calc?.isComplete ? calc.avgSolo : '-'}</td>
+                                                <td className="p-3 border text-center font-bold">{calc?.isComplete ? calc.numericScore : '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>
@@ -797,10 +958,11 @@
         // --- REPORTS VIEW ---
         function ReportsView({ classes, students, curriculum, attendanceSessions, assessments, teacher, school }) {
             const [activeSubTab, setActiveSubTab] = useState("attendance");
-            const [scoreType, setScoreType] = useState("process");
             const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || "");
-            const [selectedStudentId, setSelectedStudentId] = useState("");
-            const [semesterScores, setSemesterScores] = useState({});
+
+            useEffect(() => {
+                if (classes.length > 0 && !selectedClassId) setSelectedClassId(classes[0].id);
+            }, [classes]);
 
             const currentStudents = students.filter(s => (s.class_id || s.classId) === selectedClassId);
             const currentClass = classes.find(c => c.id === selectedClassId);
@@ -809,36 +971,29 @@
 
             return (
                 <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 no-print">
+                    <div className="bg-white p-6 rounded-2xl border shadow-sm space-y-4 no-print">
                         <div className="flex justify-between items-center">
-                            <div>
-                                <h3 className="text-base font-bold text-slate-800">Pusat Laporan Resmi SIPAKATAU</h3>
-                                <p className="text-xs text-slate-500">Cetak rekap kehadiran & nilai.</p>
-                            </div>
-                            <button onClick={() => window.print()} className="bg-brand-600 text-white font-bold text-xs px-4 py-2 rounded-xl">
-                                <i className="fa-solid fa-print mr-1"></i> Cetak / PDF
-                            </button>
+                            <h3 className="text-base font-bold">Pusat Laporan Resmi SIPAKATAU</h3>
+                            <button onClick={() => window.print()} className="bg-brand-600 text-white font-bold text-xs px-4 py-2 rounded-xl"><i className="fa-solid fa-print mr-1"></i> Cetak PDF</button>
                         </div>
                         <div className="flex border-b text-xs font-bold gap-4">
                             <button onClick={() => setActiveSubTab("attendance")} className={`pb-2 ${activeSubTab === 'attendance' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>1. Kehadiran</button>
                             <button onClick={() => setActiveSubTab("classScores")} className={`pb-2 ${activeSubTab === 'classScores' ? 'text-brand-600 border-b-2 border-brand-600' : 'text-slate-500'}`}>2. Nilai Kelas</button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-[11px] font-bold">Kelas</label>
-                                <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full px-3 py-1.5 border rounded-xl text-xs">
-                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </div>
+                        <div>
+                            <label className="text-[11px] font-bold block mb-1">Kelas</label>
+                            <select value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)} className="w-full md:w-1/3 px-3 py-1.5 border rounded-xl text-xs">
+                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
                         </div>
                     </div>
 
-                    <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-md space-y-6 max-w-4xl mx-auto">
+                    <div className="bg-white p-8 rounded-2xl border shadow-md space-y-6 max-w-4xl mx-auto">
                         <div className="flex items-center gap-4 border-b-2 border-slate-800 pb-4">
                             {school.logoUrl ? <img src={school.logoUrl} className="w-16 h-16 object-contain" /> : <div className="w-16 h-16 bg-slate-100 border rounded-xl flex items-center justify-center text-xs">Logo</div>}
                             <div className="flex-1 text-center">
-                                <h4 className="font-extrabold text-sm uppercase text-slate-800">{school.agency || "DINAS PENDIDIKAN KABUPATEN GOWA"}</h4>
-                                <h3 className="font-black text-base uppercase text-slate-900">{school.name}</h3>
+                                <h4 className="font-extrabold text-sm uppercase">{school.agency || "DINAS PENDIDIKAN KABUPATEN GOWA"}</h4>
+                                <h3 className="font-black text-base uppercase">{school.name}</h3>
                                 <p className="text-[11px] text-slate-600">{school.address}</p>
                             </div>
                         </div>
@@ -889,7 +1044,7 @@
                                             const calc = tp ? calculateSoloScore(studentScores, tp) : null;
                                             return (
                                                 <tr key={st.id}>
-                                                    <td className="p-2 border">{i + 1}</td>
+                                                    <td className="p-2 border font-semibold">{i + 1}</td>
                                                     <td className="p-2 border font-bold">{st.name}</td>
                                                     <td className="p-2 border font-mono">{st.nis}</td>
                                                     <td className="p-2 border text-center font-bold">{calc?.isComplete ? calc.avgSolo : '-'}</td>
@@ -972,11 +1127,11 @@
                             <nav className="space-y-1">
                                 {[
                                     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
-                                    { id: 'identity', label: 'Identitas Sekolah', icon: 'fa-id-card' },
+                                    { id: 'identity', label: 'Identitas Guru & Sekolah', icon: 'fa-id-card' },
                                     { id: 'classes', label: 'Data Kelas', icon: 'fa-chalkboard' },
                                     { id: 'students', label: 'Data Murid', icon: 'fa-user-graduate' },
                                     { id: 'attendance', label: 'Kehadiran Murid', icon: 'fa-calendar-check' },
-                                    { id: 'curriculum', label: 'Kurikulum & SOLO', icon: 'fa-book-open-reader' },
+                                    { id: 'curriculum', label: 'Kurikulum & Rubrik SOLO', icon: 'fa-book-open-reader' },
                                     { id: 'assessmentInput', label: 'Input Penilaian SOLO', icon: 'fa-pen-to-square' },
                                     { id: 'reports', label: 'Laporan Resmi', icon: 'fa-file-signature' },
                                 ].map(item => (
@@ -986,6 +1141,10 @@
                                 ))}
                             </nav>
                         </div>
+                        <div className="border-t border-slate-800 pt-4 px-2 text-[11px] text-slate-500">
+                            <p className="font-bold text-slate-400">SIPAKATAU v2.0</p>
+                            <p>Pengembang: <strong>Hasdinar, S.Pd.</strong></p>
+                        </div>
                     </aside>
 
                     <main className="flex-1 p-4 md:p-8 overflow-y-auto">
@@ -993,7 +1152,7 @@
                         {activeTab === 'identity' && <IdentityView teacher={teacher} setTeacher={setTeacher} school={school} setSchool={setSchool} showToast={showToast} />}
                         {activeTab === 'classes' && <ClassesView classes={classes} showToast={showToast} refreshData={refreshData} />}
                         {activeTab === 'students' && <StudentsView students={students} classes={classes} showToast={showToast} refreshData={refreshData} />}
-                        {activeTab === 'attendance' && <AttendanceView classes={classes} students={students} showToast={showToast} refreshData={refreshData} />}
+                        {activeTab === 'attendance' && <AttendanceView classes={classes} students={students} attendanceSessions={attendanceSessions} showToast={showToast} refreshData={refreshData} />}
                         {activeTab === 'curriculum' && <CurriculumView curriculum={curriculum} setCurriculum={setCurriculum} showToast={showToast} />}
                         {activeTab === 'assessmentInput' && <AssessmentInputView classes={classes} students={students} curriculum={curriculum} assessments={assessments} showToast={showToast} refreshData={refreshData} />}
                         {activeTab === 'reports' && <ReportsView classes={classes} students={students} curriculum={curriculum} attendanceSessions={attendanceSessions} assessments={assessments} teacher={teacher} school={school} />}
